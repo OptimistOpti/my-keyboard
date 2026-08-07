@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -25,10 +27,14 @@ jobs:
           set +e
           ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log
           EXIT=${PIPESTATUS[0]}
-          echo "## Build Log" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -120 build.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ $EXIT -ne 0 ]; then
+            git config user.email "actions@github.com"
+            git config user.name "GitHub Actions"
+            cp build.log build-error.log
+            git add build-error.log
+            git commit -m "ci: save build error log [skip ci]"
+            git push
+          fi
           exit $EXIT
 
       - name: Upload APK
