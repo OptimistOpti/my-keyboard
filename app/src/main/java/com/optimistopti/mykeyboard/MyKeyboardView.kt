@@ -319,6 +319,7 @@ class MyKeyboardView @JvmOverloads constructor(context: Context, attrs: Attribut
                 currentLayout = if (currentLayout == Layout.RUSSIAN) Layout.ENGLISH else Layout.RUSSIAN
                 rebuildKeys()
             }
+            KeyType.LAYOUT_SWITCH -> { showNumbers = !showNumbers; rebuildKeys() }
             KeyType.SHIFT -> {
                 val now = System.currentTimeMillis()
                 if (now - lastShiftTime < 400) { isCapsLock = !isCapsLock; isShifted = isCapsLock }
