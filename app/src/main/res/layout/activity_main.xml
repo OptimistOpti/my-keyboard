@@ -1,109 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="?attr/colorSurface">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?attr/colorPrimary"
-            android:padding="24dp">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="⌨️" android:textSize="52sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="My Keyboard" android:textSize="26sp" android:textColor="#FFFFFF"
-                android:textStyle="bold" android:layout_marginTop="8dp"/>
-            <TextView android:id="@+id/tv_status" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:textSize="14sp"
-                android:layout_marginTop="6dp" android:text="Проверка..."/>
-        </LinearLayout>
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:padding="16dp" android:gravity="center">
-            <Button android:id="@+id/btn_enable" android:layout_width="0dp"
-                android:layout_height="48dp" android:layout_weight="1"
-                android:layout_marginEnd="8dp" android:text="Включить"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <Button android:id="@+id/btn_select" android:layout_width="0dp"
-                android:layout_height="48dp" android:layout_weight="1"
-                android:layout_marginStart="8dp" android:text="Выбрать"
-                style="@style/Widget.MaterialComponents.Button"/>
-        </LinearLayout>
-
-        <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:background="?attr/colorControlHighlight" android:layout_marginHorizontal="16dp"/>
-
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Цвет акцента" android:textSize="13sp" android:textColor="?attr/colorPrimary"
-            android:textStyle="bold" android:paddingHorizontal="20dp"
-            android:paddingTop="20dp" android:paddingBottom="8dp"/>
-
-        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:paddingHorizontal="12dp" android:paddingBottom="12dp">
-            <LinearLayout android:id="@+id/color_picker_container"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:gravity="center_vertical"/>
-        </HorizontalScrollView>
-
-        <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:background="?attr/colorControlHighlight" android:layout_marginHorizontal="16dp"/>
-
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Внешний вид" android:textSize="13sp" android:textColor="?attr/colorPrimary"
-            android:textStyle="bold" android:paddingHorizontal="20dp"
-            android:paddingTop="20dp" android:paddingBottom="4dp"/>
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="60dp"
-            android:orientation="horizontal" android:gravity="center_vertical"
-            android:paddingHorizontal="20dp">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Тёмная тема"
-                android:textSize="16sp" android:textColor="?attr/colorOnSurface"/>
-            <Switch android:id="@+id/switch_theme" android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:paddingHorizontal="20dp" android:paddingBottom="12dp">
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Скругление клавиш" android:textSize="16sp" android:textColor="?attr/colorOnSurface"/>
-            <SeekBar android:id="@+id/seek_radius" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:max="24" android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:paddingHorizontal="20dp" android:paddingBottom="16dp">
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Высота клавиатуры" android:textSize="16sp" android:textColor="?attr/colorOnSurface"/>
-            <SeekBar android:id="@+id/seek_height" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:max="32" android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:background="?attr/colorControlHighlight" android:layout_marginHorizontal="16dp"/>
-
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Поведение" android:textSize="13sp" android:textColor="?attr/colorPrimary"
-            android:textStyle="bold" android:paddingHorizontal="20dp"
-            android:paddingTop="20dp" android:paddingBottom="4dp"/>
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="60dp"
-            android:orientation="horizontal" android:gravity="center_vertical"
-            android:paddingHorizontal="20dp">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Вибрация при нажатии"
-                android:textSize="16sp" android:textColor="?attr/colorOnSurface"/>
-            <Switch android:id="@+id/switch_vibrate" android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <View android:layout_width="match_parent" android:layout_height="32dp"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="?attr/colorSurface">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="120dp"
+        android:orientation="vertical" android:gravity="center"
+        android:background="?attr/colorPrimary" android:padding="16dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="⌨️  My Keyboard" android:textSize="22sp"
+            android:textColor="#FFFFFF" android:textStyle="bold"/>
+        <TextView android:id="@+id/tv_status" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:textSize="13sp"
+            android:layout_marginTop="6dp" android:text="Проверка..."/>
     </LinearLayout>
-</ScrollView>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="56dp"
+        android:orientation="horizontal" android:padding="10dp" android:gravity="center">
+        <Button android:id="@+id/btn_enable" android:layout_width="0dp"
+            android:layout_height="match_parent" android:layout_weight="1"
+            android:layout_marginEnd="6dp" android:text="Включить"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+        <Button android:id="@+id/btn_select" android:layout_width="0dp"
+            android:layout_height="match_parent" android:layout_weight="1"
+            android:layout_marginStart="6dp" android:text="Выбрать"
+            style="@style/Widget.MaterialComponents.Button"/>
+    </LinearLayout>
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="?attr/colorControlHighlight"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_settings" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1"/>
+</LinearLayout>
