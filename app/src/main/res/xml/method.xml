@@ -2,5 +2,6 @@
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
     android:settingsActivity="com.optimistopti.mykeyboard.MainActivity">
     <subtype android:label="Russian" android:imeSubtypeLocale="ru_RU" android:imeSubtypeMode="keyboard"/>
+    <subtype android:label="Ukrainian" android:imeSubtypeLocale="uk_UA" android:imeSubtypeMode="keyboard"/>
     <subtype android:label="English" android:imeSubtypeLocale="en_US" android:imeSubtypeMode="keyboard"/>
 </input-method>
