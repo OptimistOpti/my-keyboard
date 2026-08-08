@@ -25,13 +25,12 @@ jobs:
             git config user.name "GitHub Actions"
             cp build.log build-error.log
             git add build-error.log
-            git commit -m "ci: save build error [skip ci]"
+            git commit -m "ci: save error [skip ci]"
             git push
           fi
           exit $EXIT
-      - name: Upload APK
+      - uses: actions/upload-artifact@v4
         if: success()
-        uses: actions/upload-artifact@v4
         with:
           name: my-keyboard-apk
           path: app/build/outputs/apk/debug/app-debug.apk
