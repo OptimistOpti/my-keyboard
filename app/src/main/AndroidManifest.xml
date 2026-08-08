@@ -3,25 +3,26 @@
     package="com.optimistopti.mykeyboard">
     <uses-permission android:name="android.permission.VIBRATE"/>
     <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.MyKeyboard">
-        <activity android:name=".MainActivity" android:exported="true"
-            android:label="@string/app_name">
+        android:allowBackup="true" android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true" android:theme="@style/Theme.MyKeyboard">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".LanguageActivity" android:exported="false"/>
+        <activity android:name=".ThemeActivity" android:exported="false"/>
+        <activity android:name=".AppearanceActivity" android:exported="false"/>
+        <activity android:name=".SoundActivity" android:exported="false"/>
+        <activity android:name=".KeysActivity" android:exported="false"/>
+        <activity android:name=".TextInputActivity" android:exported="false"/>
+        <activity android:name=".GesturesActivity" android:exported="false"/>
         <service android:name=".MyKeyboardService" android:exported="true"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_INPUT_METHOD">
-            <intent-filter>
-                <action android:name="android.view.InputMethod"/>
-            </intent-filter>
+            <intent-filter><action android:name="android.view.InputMethod"/></intent-filter>
             <meta-data android:name="android.view.im" android:resource="@xml/method"/>
         </service>
     </application>
