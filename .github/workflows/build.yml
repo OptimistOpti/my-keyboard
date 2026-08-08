@@ -1,27 +1,20 @@
 name: Build APK
-
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
+      - run: chmod +x ./gradlew
       - name: Build Debug APK
         run: |
           set +e
@@ -32,11 +25,10 @@ jobs:
             git config user.name "GitHub Actions"
             cp build.log build-error.log
             git add build-error.log
-            git commit -m "ci: save build error log [skip ci]"
+            git commit -m "ci: save build error [skip ci]"
             git push
           fi
           exit $EXIT
-
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
