@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">KeyBoard You</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_themes">Темы</string>
+    <string name="settings_background">Фон</string>
+    <string name="settings_appearance">Внешний вид</string>
+    <string name="settings_sound">Звук и вибрация</string>
+    <string name="settings_keys">Клавиши</string>
+    <string name="settings_text_input">Ввод текста</string>
+    <string name="settings_gestures">Жесты</string>
 </resources>
