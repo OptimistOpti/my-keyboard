@@ -1,12 +1,17 @@
 package com.optimistopti.mykeyboard
 
 import android.inputmethodservice.InputMethodService
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.widget.LinearLayout
 
 class MyKeyboardService : InputMethodService() {
     private lateinit var keyboardView: MyKeyboardView
+
+    val currentInputConnectionCompat: InputConnection?
+        get() = currentInputConnection
 
     override fun onCreateInputView(): View {
         val layout = layoutInflater.inflate(R.layout.keyboard_main, null) as LinearLayout
@@ -21,7 +26,9 @@ class MyKeyboardService : InputMethodService() {
     }
 
     fun commitText(text: String) { currentInputConnection?.commitText(text, 1) }
+
     fun deleteChar() { currentInputConnection?.deleteSurroundingText(1, 0) }
+
     fun deleteWord() {
         val conn = currentInputConnection ?: return
         val text = conn.getTextBeforeCursor(50, 0) ?: return
@@ -30,5 +37,10 @@ class MyKeyboardService : InputMethodService() {
         val toDelete = if (lastSpace >= 0) trimmed.length - lastSpace else trimmed.length
         conn.deleteSurroundingText(toDelete.coerceAtLeast(1), 0)
     }
+
     fun commitEmoji(emoji: String) { currentInputConnection?.commitText(emoji, 1) }
+
+    fun sendDefaultEditorAction(fromEnterKey: Boolean): Boolean {
+        return super.sendDefaultEditorAction(fromEnterKey)
+    }
 }
