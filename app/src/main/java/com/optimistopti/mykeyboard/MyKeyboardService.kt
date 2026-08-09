@@ -24,7 +24,7 @@ class MyKeyboardService : InputMethodService() {
     fun deleteChar() { currentInputConnection?.deleteSurroundingText(1, 0) }
     fun deleteWord() {
         val conn = currentInputConnection ?: return
-        val text = conn.getTextBeforeCursor(20, 0) ?: return
+        val text = conn.getTextBeforeCursor(50, 0) ?: return
         val trimmed = text.trimEnd()
         val lastSpace = trimmed.lastIndexOf(' ')
         val toDelete = if (lastSpace >= 0) trimmed.length - lastSpace else trimmed.length
