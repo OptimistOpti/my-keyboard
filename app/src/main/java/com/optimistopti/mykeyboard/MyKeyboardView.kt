@@ -144,7 +144,7 @@ class MyKeyboardView @JvmOverloads constructor(
         currentLangIndex = langs.indexOf(prefs.primaryLanguage).coerceAtLeast(0)
         isShifted = false; isCapsLock = false
         showStickers = false; showNumbers = false; showClipboard = false
-        cancelLongPress()
+        stopLongPress()
         rebuildKeys(); invalidate()
     }
 
@@ -431,7 +431,7 @@ class MyKeyboardView @JvmOverloads constructor(
                 // Backspace swipe-delete: drag left on backspace key
                 if (swipeStartedOnBackspace) {
                     if (adx > 60f && dx < 0) {
-                        cancelLongPress()
+                        stopLongPress()
                         service?.deleteWord()
                         swipeStartedOnBackspace = false
                         pressedKey = null
@@ -450,7 +450,7 @@ class MyKeyboardView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                cancelLongPress()
+                stopLongPress()
                 popupKey = null
                 val dx = x - touchStartX
 
@@ -492,7 +492,7 @@ class MyKeyboardView @JvmOverloads constructor(
         postDelayed(longPressRunnable!!, longPressDelay)
     }
 
-    private fun cancelLongPress() {
+    private fun stopLongPress() {
         longPressRunnable?.let { removeCallbacks(it) }
         longPressRunnable = null
         isLongPressing = false
@@ -500,11 +500,14 @@ class MyKeyboardView @JvmOverloads constructor(
 
     // Deletes selected text if any, otherwise one character
     private fun deleteSelectedOrChar() {
-        val conn = currentInputConnection ?: return service?.deleteChar() ?: Unit
-        // Check if there's a selection
-        val selected = conn.getSelectedText(0)
-        if (!selected.isNullOrEmpty()) {
-            conn.commitText("", 1)   // replaces selection with empty
+        val conn = service?.currentInputConnectionCompat
+        if (conn != null) {
+            val selected = conn.getSelectedText(0)
+            if (!selected.isNullOrEmpty()) {
+                conn.commitText("", 1)
+            } else {
+                service?.deleteChar()
+            }
         } else {
             service?.deleteChar()
         }
@@ -538,19 +541,19 @@ class MyKeyboardView @JvmOverloads constructor(
             }
             KeyType.BACKSPACE  -> deleteSelectedOrChar()
             KeyType.SPACE      -> service?.commitText(" ")
-            KeyType.ENTER      -> service?.sendDefaultEditorAction(false)
+            KeyType.ENTER      -> service?.performEnter()
             KeyType.STICKER    -> { showStickers=true; invalidate() }
             KeyType.NUMBERS    -> { showNumbers=!showNumbers; rebuildKeys(); invalidate() }
             KeyType.LANG       -> switchLanguage(true)
             KeyType.ARROW_LEFT -> {
-                val conn = currentInputConnection
+                val conn = service?.currentInputConnectionCompat
                 conn?.sendKeyEvent(android.view.KeyEvent(
                     android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT))
                 conn?.sendKeyEvent(android.view.KeyEvent(
                     android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_LEFT))
             }
             KeyType.ARROW_RIGHT -> {
-                val conn = currentInputConnection
+                val conn = service?.currentInputConnectionCompat
                 conn?.sendKeyEvent(android.view.KeyEvent(
                     android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
                 conn?.sendKeyEvent(android.view.KeyEvent(
@@ -628,6 +631,4 @@ class MyKeyboardView @JvmOverloads constructor(
             (Color.blue(c1)*ir+Color.blue(c2)*r).toInt())
     }
 
-    // Expose for service
-    private val currentInputConnection get() = service?.currentInputConnectionCompat
 }
