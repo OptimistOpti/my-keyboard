@@ -1,1 +1,3 @@
-<resources><string name="app_name">My Keyboard</string></resources>
+<resources>
+    <string name="app_name">KeyBoard You</string>
+</resources>
