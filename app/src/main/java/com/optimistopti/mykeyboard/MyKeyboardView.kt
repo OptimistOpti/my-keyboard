@@ -1,6 +1,12 @@
 package com.optimistopti.mykeyboard
 
 import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.renderscript.Allocation
+import android.renderscript.Element
+import android.renderscript.RenderScript
+import android.renderscript.ScriptIntrinsicBlur
 import android.graphics.*
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -25,6 +31,9 @@ class MyKeyboardView @JvmOverloads constructor(
     private var showNumbers = false
     private var showClipboard = false
     private val clipItems = mutableListOf<String>()
+    private var bgBitmap: android.graphics.Bitmap? = null
+    private var bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var lastBgUri: String = 
 
     // Touch tracking
     private var touchStartX = 0f
@@ -252,9 +261,31 @@ class MyKeyboardView @JvmOverloads constructor(
     }
 
     // ─── Draw ────────────────────────────────────────────────────────────────
+    private fun loadBgIfNeeded() {
+        val uri = prefs.bgImageUri
+        if (uri == lastBgUri) return
+        lastBgUri = uri
+        bgBitmap = if (uri.isEmpty()) null else {
+            try {
+                val input = context.contentResolver.openInputStream(Uri.parse(uri))
+                val raw = BitmapFactory.decodeStream(input)
+                input?.close()
+                // Scale to keyboard size
+                if (raw != null && width > 0 && height > 0)
+                    android.graphics.Bitmap.createScaledBitmap(raw, width, height, true)
+                else raw
+            } catch (_: Exception) { null }
+        }
+    }
     override fun onDraw(canvas: Canvas) {
         val r = prefs.keyRadius
+        loadBgIfNeeded()
         canvas.drawColor(prefs.bgColor())
+        // Draw background image if set
+        bgBitmap?.let { bm ->
+            bgPaint.alpha = (prefs.bgImageOpacity * 255 / 100).coerceIn(0, 255)
+            canvas.drawBitmap(bm, 0f, 0f, bgPaint)
+        }
         when {
             showClipboard -> { drawClipboard(canvas); return }
             showStickers  -> { drawStickers(canvas); return }
