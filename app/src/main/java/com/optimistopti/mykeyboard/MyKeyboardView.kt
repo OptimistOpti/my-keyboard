@@ -72,7 +72,7 @@ class MyKeyboardView @JvmOverloads constructor(
     enum class KeyType {
         CHAR, BACKSPACE, SHIFT, ENTER, SPACE, NUMBERS,
         STICKER, LANG, COMMA, PERIOD, CLIP_ITEM, CLIP_CLOSE,
-        ARROW_LEFT, ARROW_RIGHT
+        ARROW_LEFT, ARROW_RIGHT  // kept for potential future use
     }
     data class Key(
         var x: Float, var y: Float, var w: Float, var h: Float,
@@ -217,26 +217,18 @@ class MyKeyboardView @JvmOverloads constructor(
     }
 
     private fun buildBottom(row: List<String>, y: Float, h: Float, pad: Float) {
-        // ?123 | , | ←  ЯЗЫК  → | . | ↵
+        // ?123 | , | < ЯЗЫК > | . | ↵
         val numW   = width * 0.115f
         val smallW = width * 0.085f
-        val arrowW = width * 0.080f
         val enterW = width * 0.130f
-        val spaceW = width - numW - smallW*2 - arrowW*2 - enterW - pad*6
+        val spaceW = width - numW - smallW*2 - enterW - pad*5
 
         var x = pad
         row.forEach { l ->
             when (l) {
                 "?123","ABC" -> { keys.add(Key(x,y,numW,h,l,KeyType.NUMBERS)); x+=numW+pad }
                 "COMMA"      -> { keys.add(Key(x,y,smallW,h,",",KeyType.COMMA)); x+=smallW+pad }
-                "SPACE"      -> {
-                    // Arrow left
-                    keys.add(Key(x,y,arrowW,h,"◀",KeyType.ARROW_LEFT)); x+=arrowW+pad
-                    // Space
-                    keys.add(Key(x,y,spaceW,h,"space",KeyType.SPACE)); x+=spaceW+pad
-                    // Arrow right
-                    keys.add(Key(x,y,arrowW,h,"▶",KeyType.ARROW_RIGHT)); x+=arrowW+pad
-                }
+                "SPACE"      -> { keys.add(Key(x,y,spaceW,h,"space",KeyType.SPACE)); x+=spaceW+pad }
                 "PERIOD"     -> { keys.add(Key(x,y,smallW,h,".",KeyType.PERIOD)); x+=smallW+pad }
                 "ENTER","↵"  -> { keys.add(Key(x,y,enterW,h,"↵",KeyType.ENTER)); x+=enterW+pad }
                 else         -> { keys.add(Key(x,y,numW,h,l,KeyType.NUMBERS)); x+=numW+pad }
@@ -302,7 +294,8 @@ class MyKeyboardView @JvmOverloads constructor(
             when (k.type) {
                 KeyType.SPACE -> {
                     val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
-                    label = when (lang) { "en" -> "English"; "uk" -> "Українська"; else -> "Русский" }
+                    val langName = when (lang) { "en" -> "English"; "uk" -> "Українська"; else -> "Русский" }
+                    label = "‹ $langName ›"
                     fontSize = k.h * 0.26f
                 }
                 KeyType.SHIFT -> {
