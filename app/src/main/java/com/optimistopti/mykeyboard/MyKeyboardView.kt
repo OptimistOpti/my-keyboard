@@ -3,10 +3,6 @@ package com.optimistopti.mykeyboard
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.renderscript.Allocation
-import android.renderscript.Element
-import android.renderscript.RenderScript
-import android.renderscript.ScriptIntrinsicBlur
 import android.graphics.*
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -33,7 +29,7 @@ class MyKeyboardView @JvmOverloads constructor(
     private val clipItems = mutableListOf<String>()
     private var bgBitmap: android.graphics.Bitmap? = null
     private var bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var lastBgUri: String = 
+    private var lastBgUri: String = ""
 
     // Touch tracking
     private var touchStartX = 0f
