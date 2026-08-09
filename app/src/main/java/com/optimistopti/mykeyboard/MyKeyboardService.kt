@@ -1,7 +1,6 @@
 package com.optimistopti.mykeyboard
 
 import android.inputmethodservice.InputMethodService
-import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -40,7 +39,7 @@ class MyKeyboardService : InputMethodService() {
 
     fun commitEmoji(emoji: String) { currentInputConnection?.commitText(emoji, 1) }
 
-    fun sendDefaultEditorAction(fromEnterKey: Boolean): Boolean {
-        return super.sendDefaultEditorAction(fromEnterKey)
+    fun performEnter() {
+        super.sendDefaultEditorAction(true)
     }
 }
