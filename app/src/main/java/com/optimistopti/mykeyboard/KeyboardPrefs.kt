@@ -36,6 +36,26 @@ class KeyboardPrefs(context: Context) {
         get() = prefs.getInt("key_padding", 5)
         set(v) = prefs.edit().putInt("key_padding", v).apply()
 
+    // Key transparency 0..255
+    var keyAlpha: Int
+        get() = prefs.getInt("key_alpha", 255)
+        set(v) = prefs.edit().putInt("key_alpha", v).apply()
+
+    // Background image URI (empty = none)
+    var bgImageUri: String
+        get() = prefs.getString("bg_image_uri", "") ?: ""
+        set(v) = prefs.edit().putString("bg_image_uri", v).apply()
+
+    // Background image opacity 0..100
+    var bgImageOpacity: Int
+        get() = prefs.getInt("bg_image_opacity", 60)
+        set(v) = prefs.edit().putInt("bg_image_opacity", v).apply()
+
+    // Background blur 0..25
+    var bgBlurRadius: Int
+        get() = prefs.getInt("bg_blur", 0)
+        set(v) = prefs.edit().putInt("bg_blur", v).apply()
+
     var vibrateEnabled: Boolean
         get() = prefs.getBoolean("vibrate", true)
         set(v) = prefs.edit().putBoolean("vibrate", v).apply()
@@ -88,7 +108,6 @@ class KeyboardPrefs(context: Context) {
         get() = prefs.getString("primary_lang", "ru") ?: "ru"
         set(v) = prefs.edit().putString("primary_lang", v).apply()
 
-    // Theme colors
     fun bgColor()         = if (isDarkTheme) 0xFF1C1B1F.toInt() else 0xFFFEF7FF.toInt()
     fun keyColor()        = if (isDarkTheme) 0xFF49454F.toInt() else 0xFFFFFFFF.toInt()
     fun specialKeyColor() = if (isDarkTheme) 0xFF332D41.toInt() else 0xFFE8DEF8.toInt()
@@ -97,4 +116,14 @@ class KeyboardPrefs(context: Context) {
     fun hintTextColor()   = if (isDarkTheme) 0xFF938F99.toInt() else 0xFF79747E.toInt()
     fun shadowColor()     = if (isDarkTheme) 0x44000000 else 0x22000000
     fun accentTextColor() = 0xFFFFFFFF.toInt()
+
+    // Key color with applied alpha
+    fun keyColorAlpha(): Int {
+        val base = keyColor()
+        return (base and 0x00FFFFFF) or (keyAlpha shl 24)
+    }
+    fun specialKeyColorAlpha(): Int {
+        val base = specialKeyColor()
+        return (base and 0x00FFFFFF) or (keyAlpha shl 24)
+    }
 }
