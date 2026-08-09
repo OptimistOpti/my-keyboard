@@ -80,7 +80,6 @@ class KeyboardPrefs(context: Context) {
         get() = prefs.getBoolean("popup", true)
         set(v) = prefs.edit().putBoolean("popup", v).apply()
 
-    // enabled languages list (comma-separated)
     var enabledLanguages: String
         get() = prefs.getString("enabled_langs", "ru,en") ?: "ru,en"
         set(v) = prefs.edit().putString("enabled_langs", v).apply()
@@ -89,13 +88,13 @@ class KeyboardPrefs(context: Context) {
         get() = prefs.getString("primary_lang", "ru") ?: "ru"
         set(v) = prefs.edit().putString("primary_lang", v).apply()
 
-    // theme colors
-    fun bgColor()          = if (isDarkTheme) 0xFF1C1B1F.toInt() else 0xFFFEF7FF.toInt()
-    fun keyColor()         = if (isDarkTheme) 0xFF49454F.toInt() else 0xFFFFFFFF.toInt()
-    fun specialKeyColor()  = if (isDarkTheme) 0xFF332D41.toInt() else 0xFFE8DEF8.toInt()
-    fun surfaceColor()     = if (isDarkTheme) 0xFF2B2930.toInt() else 0xFFF3EFF4.toInt()
-    fun textColor()        = if (isDarkTheme) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
-    fun hintTextColor()    = if (isDarkTheme) 0xFF938F99.toInt() else 0xFF79747E.toInt()
-    fun shadowColor()      = if (isDarkTheme) 0x44000000 else 0x22000000
-    fun accentTextColor()  = 0xFFFFFFFF.toInt()
+    // Theme colors
+    fun bgColor()         = if (isDarkTheme) 0xFF1C1B1F.toInt() else 0xFFFEF7FF.toInt()
+    fun keyColor()        = if (isDarkTheme) 0xFF49454F.toInt() else 0xFFFFFFFF.toInt()
+    fun specialKeyColor() = if (isDarkTheme) 0xFF332D41.toInt() else 0xFFE8DEF8.toInt()
+    fun surfaceColor()    = if (isDarkTheme) 0xFF2B2930.toInt() else 0xFFF3EFF4.toInt()
+    fun textColor()       = if (isDarkTheme) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+    fun hintTextColor()   = if (isDarkTheme) 0xFF938F99.toInt() else 0xFF79747E.toInt()
+    fun shadowColor()     = if (isDarkTheme) 0x44000000 else 0x22000000
+    fun accentTextColor() = 0xFFFFFFFF.toInt()
 }
