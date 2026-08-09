@@ -3,11 +3,11 @@
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <path android:fillColor="#FF6750A4"
-        android:pathData="M20,38 Q20,28 30,28 L78,28 Q88,28 88,38 L88,72 Q88,82 78,82 L30,82 Q20,82 20,72 Z"/>
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
-        android:pathData="M33,47 L39,47 M45,47 L51,47 M57,47 L63,47 M69,47 L75,47"/>
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
-        android:pathData="M33,58 L39,58 M45,58 L51,58 M57,58 L63,58 M69,58 L75,58"/>
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
-        android:pathData="M37,69 L71,69"/>
+        android:pathData="M18,36 Q18,24 30,24 L78,24 Q90,24 90,36 L90,72 Q90,84 78,84 L30,84 Q18,84 18,72 Z"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4.5" android:strokeLineCap="round"
+        android:pathData="M30,45 L36,45 M42,45 L48,45 M54,45 L60,45 M66,45 L72,45 M78,45 L84,45"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4.5" android:strokeLineCap="round"
+        android:pathData="M30,55 L36,55 M42,55 L48,55 M54,55 L60,55 M66,55 L72,55 M78,55 L84,55"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4.5" android:strokeLineCap="round"
+        android:pathData="M36,65 L72,65"/>
 </vector>
