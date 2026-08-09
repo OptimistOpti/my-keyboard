@@ -1,57 +1,38 @@
 package com.optimistopti.mykeyboard
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 abstract class BaseSettingsActivity : AppCompatActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    protected fun applyAppTheme(prefs: KeyboardPrefs) {
+        setTheme(if (prefs.isDarkTheme) R.style.Theme_MyKeyboard_Dark else R.style.Theme_MyKeyboard_Light)
     }
 
-    // Call this after setContentView to add FAB
-    protected fun addKeyboardFab() {
-        val root = window.decorView.findViewById<FrameLayout>(android.R.id.content)
-        val fab = FloatingActionButton(this).apply {
-            setImageResource(android.R.drawable.ic_input_get)
-            size = com.google.android.material.floatingactionbutton.FloatingActionButton.SIZE_NORMAL
-            val density = resources.displayMetrics.density
-            val margin = (16 * density).toInt()
-            val params = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
-                setMargins(margin, margin, margin, (margin * 4))
-            }
-            layoutParams = params
-            contentDescription = "Показать клавиатуру"
-            backgroundTintList = android.content.res.ColorStateList.valueOf(
-                KeyboardPrefs(context).accentColor
-            )
-            setOnClickListener {
-                // Show a small edit text dialog to invoke the keyboard
-                showKeyboardPreview()
-            }
-        }
-        root.addView(fab)
+    protected fun setupToolbar(toolbar: Toolbar, title: String?) {
+        setSupportActionBar(toolbar)
+        title?.let { supportActionBar?.title = it }
+        supportActionBar?.setDisplayHomeAsUpEnabled(title != null)
     }
 
-    private fun showKeyboardPreview() {
-        val et = android.widget.EditText(this)
-        val dialog = android.app.AlertDialog.Builder(this)
-            .setTitle("Предпросмотр клавиатуры")
-            .setMessage("Введи текст чтобы протестировать:")
+    override fun onSupportNavigateUp(): Boolean { finish(); return true }
+
+    protected fun showKeyboardPreview() {
+        val et = EditText(this).apply { hint = "Введи текст…" }
+        AlertDialog.Builder(this)
+            .setTitle("Тест клавиатуры")
             .setView(et)
             .setPositiveButton("Закрыть", null)
-            .create()
-        dialog.show()
-        et.requestFocus()
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(et, InputMethodManager.SHOW_IMPLICIT)
+            .show()
+        et.post {
+            et.requestFocus()
+            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                .showSoftInput(et, InputMethodManager.SHOW_IMPLICIT)
+        }
     }
 }
