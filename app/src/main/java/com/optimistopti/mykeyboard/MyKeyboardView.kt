@@ -700,3 +700,4 @@ class MyKeyboardView @JvmOverloads constructor(
             (Color.green(c1)*ir+Color.green(c2)*r).toInt(),
             (Color.blue(c1)*ir+Color.blue(c2)*r).toInt())
     }
+}
