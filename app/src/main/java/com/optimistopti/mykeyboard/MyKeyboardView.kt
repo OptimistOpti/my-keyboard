@@ -2,6 +2,7 @@ package com.optimistopti.mykeyboard
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.graphics.drawable.VectorDrawable
 import android.net.Uri
 import android.graphics.*
 import android.os.VibrationEffect
@@ -28,6 +29,11 @@ class MyKeyboardView @JvmOverloads constructor(
     private var showClipboard = false
     private val clipItems = mutableListOf<String>()
     private var bgBitmap: android.graphics.Bitmap? = null
+    private var iconBackspace: android.graphics.Bitmap? = null
+    private var iconEnter: android.graphics.Bitmap? = null
+    private var iconShift: android.graphics.Bitmap? = null
+    private var iconShiftLocked: android.graphics.Bitmap? = null
+    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var lastBgUri: String = ""
 
@@ -145,6 +151,7 @@ class MyKeyboardView @JvmOverloads constructor(
     fun setKeyboardService(s: MyKeyboardService) { service = s }
 
     fun reset() {
+        resetIconCache()
         val langs = allLangs
         currentLangIndex = langs.indexOf(prefs.primaryLanguage).coerceAtLeast(0)
         isShifted = false; isCapsLock = false
@@ -257,6 +264,27 @@ class MyKeyboardView @JvmOverloads constructor(
     }
 
     // ─── Draw ────────────────────────────────────────────────────────────────
+    private fun loadIcons() {
+        if (iconBackspace != null) return
+        fun vecToBitmap(resId: Int, w: Int, h: Int, tint: Int): android.graphics.Bitmap {
+            val d = androidx.core.content.ContextCompat.getDrawable(context, resId) ?: return android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+            d.setTint(tint)
+            val bm = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+            val c = Canvas(bm); d.setBounds(0, 0, w, h); d.draw(c)
+            return bm
+        }
+        val sz = (22 * context.resources.displayMetrics.density).toInt()
+        val tc = prefs.textColor(); val ac = prefs.accentTextColor()
+        iconBackspace   = vecToBitmap(R.drawable.ic_backspace, sz, sz, tc)
+        iconEnter       = vecToBitmap(R.drawable.ic_enter, sz, sz, ac)
+        iconShift       = vecToBitmap(R.drawable.ic_shift, sz, sz, tc)
+        iconShiftLocked = vecToBitmap(R.drawable.ic_shift_locked, sz, sz, ac)
+    }
+
+    private fun resetIconCache() {
+        iconBackspace = null; iconEnter = null; iconShift = null; iconShiftLocked = null
+    }
+
     private fun loadBgIfNeeded() {
         val uri = prefs.bgImageUri
         if (uri == lastBgUri) return
@@ -276,6 +304,7 @@ class MyKeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         val r = prefs.keyRadius
         loadBgIfNeeded()
+        loadIcons()
         canvas.drawColor(prefs.bgColor())
         // Draw background image if set
         bgBitmap?.let { bm ->
@@ -326,12 +355,11 @@ class MyKeyboardView @JvmOverloads constructor(
                     fontSize = k.h * 0.26f
                 }
                 KeyType.SHIFT -> {
-                    // Draw shift icon using text
-                    label = if (isCapsLock) "⇪" else "⇧"
+                    label = ""  // drawn as bitmap below
                     fontSize = k.h * 0.46f
                 }
                 KeyType.ENTER -> {
-                    label = "⏎"
+                    label = ""  // drawn as bitmap below
                     fontSize = k.h * 0.44f
                 }
                 KeyType.ARROW_LEFT, KeyType.ARROW_RIGHT -> {
@@ -339,11 +367,34 @@ class MyKeyboardView @JvmOverloads constructor(
                 }
                 KeyType.NUMBERS -> { label = k.label; fontSize = k.h * 0.32f }
                 KeyType.COMMA, KeyType.PERIOD -> { label = k.label; fontSize = k.h * 0.46f }
-                KeyType.BACKSPACE -> { label = "⌫"; fontSize = k.h * 0.44f }
+                KeyType.BACKSPACE -> { label = ""; fontSize = k.h * 0.44f }
                 else -> { label = k.label; fontSize = k.h * 0.42f }
             }
             textPaint.textSize = fontSize
             canvas.drawText(label, k.x+k.w/2, k.y+k.h*0.64f, textPaint)
+
+            // Draw vector icons for special keys
+            when (k.type) {
+                KeyType.BACKSPACE -> iconBackspace?.let { bm ->
+                    val bx = k.x + k.w/2 - bm.width/2
+                    val by = k.y + k.h/2 - bm.height/2
+                    canvas.drawBitmap(bm, bx, by, iconPaint)
+                }
+                KeyType.ENTER -> iconEnter?.let { bm ->
+                    val bx = k.x + k.w/2 - bm.width/2
+                    val by = k.y + k.h/2 - bm.height/2
+                    canvas.drawBitmap(bm, bx, by, iconPaint)
+                }
+                KeyType.SHIFT -> {
+                    val bm = if (isCapsLock) iconShiftLocked else iconShift
+                    bm?.let {
+                        val bx = k.x + k.w/2 - it.width/2
+                        val by = k.y + k.h/2 - it.height/2
+                        canvas.drawBitmap(it, bx, by, iconPaint)
+                    }
+                }
+                else -> {}
+            }
 
             if (k.altLabel.isNotEmpty() && prefs.showTopHints) {
                 hintPaint.color = prefs.hintTextColor()
