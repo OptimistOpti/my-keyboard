@@ -1,5 +1,6 @@
 package com.optimistopti.mykeyboard
 
+import android.content.Intent
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.widget.*
@@ -14,7 +15,6 @@ class ThemeActivity : BaseSettingsActivity() {
         setContentView(b.root)
         setupToolbarBack(b.toolbar, "Темы")
         setupFab(b.fab)
-
         buildContent()
     }
 
@@ -24,9 +24,9 @@ class ThemeActivity : BaseSettingsActivity() {
         addSectionHeader(b.content, "Тема оформления")
         val modes = listOf("☀️ Day", "🌙 Night", "⬛ AMOLED")
         val curIdx = when (prefs.themeMode) {
-            KeyboardPrefs.THEME_DAY   -> 0
+            KeyboardPrefs.THEME_DAY    -> 0
             KeyboardPrefs.THEME_AMOLED -> 2
-            else                      -> 1
+            else                       -> 1
         }
         addSegment(b.content, "Выбор темы", modes, curIdx) { idx ->
             prefs.themeMode = when (idx) {
@@ -34,6 +34,7 @@ class ThemeActivity : BaseSettingsActivity() {
                 2    -> KeyboardPrefs.THEME_AMOLED
                 else -> KeyboardPrefs.THEME_NIGHT
             }
+            notifyThemeChanged()
             recreate()
         }
 
@@ -54,6 +55,7 @@ class ThemeActivity : BaseSettingsActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding((8*d).toInt(), (8*d).toInt(), (8*d).toInt(), (8*d).toInt())
         }
+
         KeyboardPrefs.PRESET_COLORS.forEachIndexed { i, color ->
             val isSelected = color == prefs.accentColor
             val col = LinearLayout(this).apply {
@@ -63,21 +65,35 @@ class ThemeActivity : BaseSettingsActivity() {
                     setMargins((4*d).toInt(), 0, (4*d).toInt(), 0)
                 }
             }
-            val circle = android.widget.ImageButton(this).apply {
+
+            // Color circle
+            val circle = android.widget.FrameLayout(this).apply {
                 val sz = (56*d).toInt()
                 layoutParams = LinearLayout.LayoutParams(sz, sz)
+            }
+            val bg = android.view.View(this).apply {
+                val sz = (56*d).toInt()
+                layoutParams = android.widget.FrameLayout.LayoutParams(sz, sz)
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(color)
-                    if (isSelected)
-                        setStroke((3*d).toInt(), prefs.textColor())
-                }
-                setImageDrawable(null)
-                setOnClickListener {
-                    prefs.accentColor = color
-                    recreate()
+                    if (isSelected) setStroke((3*d).toInt(), prefs.textColor())
                 }
             }
+            val check = android.widget.TextView(this).apply {
+                text = if (isSelected) "✓" else ""
+                textSize = 20f
+                gravity = android.view.Gravity.CENTER
+                setTextColor(0xFFFFFFFF.toInt())
+                layoutParams = android.widget.FrameLayout.LayoutParams(-1, -1)
+            }
+            circle.addView(bg); circle.addView(check)
+            circle.setOnClickListener {
+                prefs.accentColor = color
+                notifyThemeChanged()
+                recreate()
+            }
+
             val lbl = android.widget.TextView(this).apply {
                 text = KeyboardPrefs.COLOR_NAMES[i]
                 textSize = 10f
@@ -88,5 +104,14 @@ class ThemeActivity : BaseSettingsActivity() {
             col.addView(circle); col.addView(lbl); row.addView(col)
         }
         scroll.addView(row); b.content.addView(scroll)
+    }
+
+    // Broadcast so keyboard service picks up new colors immediately
+    private fun notifyThemeChanged() {
+        sendBroadcast(Intent(ACTION_THEME_CHANGED).setPackage(packageName))
+    }
+
+    companion object {
+        const val ACTION_THEME_CHANGED = "com.optimistopti.mykeyboard.THEME_CHANGED"
     }
 }
