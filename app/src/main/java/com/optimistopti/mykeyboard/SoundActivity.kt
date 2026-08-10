@@ -1,34 +1,24 @@
 package com.optimistopti.mykeyboard
+
 import android.os.Bundle
-import android.widget.*
+import com.optimistopti.mykeyboard.databinding.ActivitySettingsBaseBinding
+
 class SoundActivity : BaseSettingsActivity() {
-    private lateinit var prefs: KeyboardPrefs
+    private lateinit var b: ActivitySettingsBaseBinding
     override fun onCreate(s: Bundle?) {
-        super.onCreate(s); prefs = KeyboardPrefs(this)
-        setTheme(if (prefs.isDarkTheme) R.style.Theme_MyKeyboard_Dark else R.style.Theme_MyKeyboard_Light)
-        setContentView(R.layout.activity_sound); title = "Звук и вибрация"
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        addKeyboardFab()
-        val c = findViewById<LinearLayout>(R.id.sound_container)
-        val d = resources.displayMetrics.density
-        addToggle(c,"Вибрация при нажатии",prefs.vibrateEnabled){prefs.vibrateEnabled=it}
-        addToggle(c,"Звук нажатия",prefs.soundEnabled){prefs.soundEnabled=it}
-        addSeek(c,d,"Длительность вибрации (мс)",prefs.vibrateDurationMs,10,90){prefs.vibrateDurationMs=it}
+        super.onCreate(s)
+        b = ActivitySettingsBaseBinding.inflate(layoutInflater)
+        setContentView(b.root)
+        setupToolbarBack(b.toolbar, "Звук и вибрация")
+        setupFab(b.fab)
+
+        addSectionHeader(b.content, "Вибрация")
+        addToggle(b.content, "Вибрация при нажатии", current = prefs.vibrateEnabled) { prefs.vibrateEnabled = it }
+        addSlider(b.content, "Длительность вибрации", prefs.vibrateDurationMs.toFloat(), 10f, 100f,
+            labelFormatter = { "${it.toInt()} мс" }) { prefs.vibrateDurationMs = it.toInt() }
+
+        addDivider(b.content)
+        addSectionHeader(b.content, "Звук")
+        addToggle(b.content, "Звук нажатия", "Щелчок при каждом нажатии", prefs.soundEnabled) { prefs.soundEnabled = it }
     }
-    private fun addToggle(c:LinearLayout, name:String, cur:Boolean, save:(Boolean)->Unit) {
-        val row=layoutInflater.inflate(R.layout.item_toggle,c,false)
-        row.findViewById<TextView>(R.id.toggle_title).text=name
-        val sw=row.findViewById<Switch>(R.id.toggle_switch); sw.isChecked=cur
-        sw.setOnCheckedChangeListener{_,v->save(v)}; c.addView(row)
-    }
-    private fun addSeek(c:LinearLayout, d:Float, name:String, cur:Int, min:Int, max:Int, save:(Int)->Unit) {
-        val label=TextView(this).apply{text="$name: $cur";textSize=14f;setTextColor(prefs.textColor());setPadding((20*d).toInt(),(12*d).toInt(),(20*d).toInt(),0)}
-        val seek=SeekBar(this).apply{this.max=max-min;progress=cur-min;setPadding((20*d).toInt(),(4*d).toInt(),(20*d).toInt(),(8*d).toInt())
-            setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
-                override fun onProgressChanged(sb:SeekBar?,v:Int,u:Boolean){val r=v+min;label.text="$name: $r";save(r)}
-                override fun onStartTrackingTouch(sb:SeekBar?){}; override fun onStopTrackingTouch(sb:SeekBar?){}
-            })}
-        c.addView(label); c.addView(seek)
-    }
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 }
