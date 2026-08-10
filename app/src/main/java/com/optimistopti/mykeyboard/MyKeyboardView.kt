@@ -27,6 +27,14 @@ class MyKeyboardView @JvmOverloads constructor(
     private var showNumbers = false
     private var showClipboard = false
     private val clipItems = mutableListOf<String>()
+
+    // Icon bitmap cache — rendered from XML drawables
+    private var iconBackspace: Bitmap? = null
+    private var iconEnter: Bitmap? = null
+    private var iconShift: Bitmap? = null
+    private var iconShiftLocked: Bitmap? = null
+    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var lastIconThemeKey: String = "" 
     private var bgBitmap: android.graphics.Bitmap? = null
 
     private var bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -262,6 +270,35 @@ class MyKeyboardView @JvmOverloads constructor(
 
 
 
+    private fun drawKeyIcon(canvas: Canvas, k: Key, bm: Bitmap?) {
+        bm ?: return
+        val bx = k.x + k.w / 2f - bm.width / 2f
+        val by = k.y + k.h / 2f - bm.height / 2f
+        canvas.drawBitmap(bm, bx, by, iconPaint)
+    }
+
+    private fun loadIconsIfNeeded() {
+        val key = "${prefs.themeMode}|${prefs.accentColor}"
+        if (key == lastIconThemeKey && iconBackspace != null) return
+        lastIconThemeKey = key
+        val sz = (22f * context.resources.displayMetrics.density).toInt()
+        iconBackspace   = renderDrawable(R.drawable.ic_backspace,    sz, prefs.textColor())
+        iconEnter       = renderDrawable(R.drawable.ic_enter,        sz, prefs.accentColor)
+        iconShift       = renderDrawable(R.drawable.ic_shift,        sz, prefs.textColor())
+        iconShiftLocked = renderDrawable(R.drawable.ic_shift_locked, sz, prefs.accentColor)
+    }
+
+    private fun renderDrawable(resId: Int, sizePx: Int, tint: Int): Bitmap {
+        val bm = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val cvs = Canvas(bm)
+        val d = androidx.core.content.ContextCompat.getDrawable(context, resId) ?: return bm
+        val w = androidx.core.graphics.drawable.DrawableCompat.wrap(d).mutate()
+        androidx.core.graphics.drawable.DrawableCompat.setTint(w, tint)
+        w.setBounds(0, 0, sizePx, sizePx)
+        w.draw(cvs)
+        return bm
+    }
+
     private fun loadBgIfNeeded() {
         val uri = prefs.bgImageUri
         if (uri == lastBgUri) return
@@ -350,15 +387,11 @@ class MyKeyboardView @JvmOverloads constructor(
             textPaint.textSize = fontSize
             canvas.drawText(label, k.x+k.w/2, k.y+k.h*0.64f, textPaint)
 
-            // Draw icons for special keys using KeyIcon helper
+            // Draw icons from cached bitmaps
             when (k.type) {
-                KeyType.BACKSPACE -> KeyIcon.draw(canvas, KeyIcon.BACKSPACE, k, prefs.textColor())
-                KeyType.ENTER     -> KeyIcon.draw(canvas, KeyIcon.ENTER, k, prefs.accentTextColor())
-                KeyType.SHIFT     -> {
-                    val res = if (isCapsLock) KeyIcon.SHIFT_LOCKED else KeyIcon.SHIFT
-                    val col = if (isShifted || isCapsLock) prefs.accentTextColor() else prefs.textColor()
-                    KeyIcon.draw(canvas, res, k, col)
-                }
+                KeyType.BACKSPACE -> drawKeyIcon(canvas, k, iconBackspace)
+                KeyType.ENTER     -> drawKeyIcon(canvas, k, iconEnter)
+                KeyType.SHIFT     -> drawKeyIcon(canvas, k, if (isCapsLock) iconShiftLocked else iconShift)
                 else -> {}
             }
 
