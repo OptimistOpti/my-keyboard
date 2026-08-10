@@ -28,14 +28,7 @@ class MyKeyboardView @JvmOverloads constructor(
     private var showClipboard = false
     private val clipItems = mutableListOf<String>()
     private var bgBitmap: android.graphics.Bitmap? = null
-    private val iconStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
-    private val iconFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
+
     private var bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var lastBgUri: String = ""
 
@@ -355,13 +348,14 @@ class MyKeyboardView @JvmOverloads constructor(
             textPaint.textSize = fontSize
             canvas.drawText(label, k.x+k.w/2, k.y+k.h*0.64f, textPaint)
 
-            // Draw icons via Canvas paths (reliable on all devices)
+            // Draw icons for special keys using KeyIcon helper
             when (k.type) {
-                KeyType.BACKSPACE -> drawIconBackspace(canvas, k, prefs.textColor())
-                KeyType.ENTER     -> drawIconEnter(canvas, k, prefs.accentTextColor())
+                KeyType.BACKSPACE -> KeyIcon.draw(canvas, KeyIcon.BACKSPACE, k, prefs.textColor())
+                KeyType.ENTER     -> KeyIcon.draw(canvas, KeyIcon.ENTER, k, prefs.accentTextColor())
                 KeyType.SHIFT     -> {
+                    val res = if (isCapsLock) KeyIcon.SHIFT_LOCKED else KeyIcon.SHIFT
                     val col = if (isShifted || isCapsLock) prefs.accentTextColor() else prefs.textColor()
-                    drawIconShift(canvas, k, col, isCapsLock)
+                    KeyIcon.draw(canvas, res, k, col)
                 }
                 else -> {}
             }
@@ -671,89 +665,3 @@ class MyKeyboardView @JvmOverloads constructor(
             (Color.green(c1)*ir+Color.green(c2)*r).toInt(),
             (Color.blue(c1)*ir+Color.blue(c2)*r).toInt())
     }
-
-    // ─── Icon drawing via Canvas paths ────────────────────────────────────────
-
-    /** Backspace: arrow shape pointing left with X inside */
-    private fun drawIconBackspace(canvas: Canvas, k: Key, color: Int) {
-        val cx = k.x + k.w / 2f
-        val cy = k.y + k.h / 2f
-        val s  = minOf(k.w, k.h) * 0.38f   // half-size of icon
-        val sw = s * 0.22f                   // stroke width
-
-        iconStrokePaint.color = color
-        iconStrokePaint.strokeWidth = sw
-
-        // Body: pentagon/arrow shape
-        val path = Path()
-        path.moveTo(cx + s,       cy - s * 0.65f)   // top-right
-        path.lineTo(cx - s * 0.1f, cy - s * 0.65f)  // top-left body
-        path.lineTo(cx - s,       cy)                // left point
-        path.lineTo(cx - s * 0.1f, cy + s * 0.65f)  // bottom-left body
-        path.lineTo(cx + s,       cy + s * 0.65f)    // bottom-right
-        path.close()
-        canvas.drawPath(path, iconStrokePaint)
-
-        // X mark inside
-        val xOff = s * 0.15f
-        val xS   = s * 0.32f
-        canvas.drawLine(cx + xOff - xS, cy - xS, cx + xOff + xS, cy + xS, iconStrokePaint)
-        canvas.drawLine(cx + xOff - xS, cy + xS, cx + xOff + xS, cy - xS, iconStrokePaint)
-    }
-
-    /** Enter: arrow down then left (↵) */
-    private fun drawIconEnter(canvas: Canvas, k: Key, color: Int) {
-        val cx = k.x + k.w / 2f
-        val cy = k.y + k.h / 2f
-        val s  = minOf(k.w, k.h) * 0.30f
-        val sw = s * 0.25f
-
-        iconStrokePaint.color = color
-        iconStrokePaint.strokeWidth = sw
-
-        val path = Path()
-        // Vertical line going down from top-right
-        path.moveTo(cx + s,        cy - s)
-        path.lineTo(cx + s,        cy + s * 0.2f)
-        // Horizontal line going left
-        path.lineTo(cx - s * 0.6f, cy + s * 0.2f)
-
-        // Arrow head pointing down-left
-        path.moveTo(cx - s * 0.6f, cy + s * 0.2f)
-        path.lineTo(cx - s * 0.2f, cy - s * 0.3f)
-        path.moveTo(cx - s * 0.6f, cy + s * 0.2f)
-        path.lineTo(cx - s * 0.2f, cy + s * 0.7f)
-
-        canvas.drawPath(path, iconStrokePaint)
-    }
-
-    /** Shift: upward arrow / capslock with underline */
-    private fun drawIconShift(canvas: Canvas, k: Key, color: Int, isCaps: Boolean) {
-        val cx = k.x + k.w / 2f
-        val cy = k.y + k.h / 2f - k.h * 0.04f
-        val s  = minOf(k.w, k.h) * 0.32f
-        val sw = s * 0.22f
-
-        iconStrokePaint.color = color
-        iconStrokePaint.strokeWidth = sw
-
-        // Arrow body
-        val path = Path()
-        path.moveTo(cx,        cy - s)           // top point
-        path.lineTo(cx - s,    cy + s * 0.15f)   // bottom-left of arrowhead
-        path.lineTo(cx - s * 0.42f, cy + s * 0.15f)
-        path.lineTo(cx - s * 0.42f, cy + s)      // bottom-left stem
-        path.lineTo(cx + s * 0.42f, cy + s)      // bottom-right stem
-        path.lineTo(cx + s * 0.42f, cy + s * 0.15f)
-        path.lineTo(cx + s,    cy + s * 0.15f)   // bottom-right of arrowhead
-        path.close()
-        canvas.drawPath(path, iconStrokePaint)
-
-        // Underline for CapsLock
-        if (isCaps) {
-            val lineY = cy + s + sw * 1.8f
-            canvas.drawLine(cx - s, lineY, cx + s, lineY, iconStrokePaint)
-        }
-    }
-
-}
