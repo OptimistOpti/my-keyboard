@@ -2,9 +2,6 @@ package com.optimistopti.mykeyboard
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.graphics.drawable.DrawableCompat
-import android.graphics.drawable.VectorDrawable
 import android.net.Uri
 import android.graphics.*
 import android.os.VibrationEffect
@@ -31,11 +28,14 @@ class MyKeyboardView @JvmOverloads constructor(
     private var showClipboard = false
     private val clipItems = mutableListOf<String>()
     private var bgBitmap: android.graphics.Bitmap? = null
-    private var iconBackspace: android.graphics.Bitmap? = null
-    private var iconEnter: android.graphics.Bitmap? = null
-    private var iconShift: android.graphics.Bitmap? = null
-    private var iconShiftLocked: android.graphics.Bitmap? = null
-    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val iconStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val iconFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
     private var bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var lastBgUri: String = ""
 
@@ -153,7 +153,6 @@ class MyKeyboardView @JvmOverloads constructor(
     fun setKeyboardService(s: MyKeyboardService) { service = s }
 
     fun reset() {
-        resetIconCache()
         val langs = allLangs
         currentLangIndex = langs.indexOf(prefs.primaryLanguage).coerceAtLeast(0)
         isShifted = false; isCapsLock = false
@@ -266,34 +265,8 @@ class MyKeyboardView @JvmOverloads constructor(
     }
 
     // ─── Draw ────────────────────────────────────────────────────────────────
-    private fun loadIcons() {
-        if (iconBackspace != null) return
-        val dm = context.resources.displayMetrics
-        val sz = (22 * dm.density).toInt()
-        val tc = prefs.textColor()
-        val ac = prefs.accentTextColor()
-        iconBackspace   = drawableToBitmap(R.drawable.ic_backspace,    sz, tc)
-        iconEnter       = drawableToBitmap(R.drawable.ic_enter,        sz, ac)
-        iconShift       = drawableToBitmap(R.drawable.ic_shift,        sz, tc)
-        iconShiftLocked = drawableToBitmap(R.drawable.ic_shift_locked, sz, ac)
-    }
 
-    private fun drawableToBitmap(resId: Int, sizePx: Int, tint: Int): android.graphics.Bitmap {
-        val bm = android.graphics.Bitmap.createBitmap(sizePx, sizePx, android.graphics.Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bm)
-        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, resId)
-            ?: return bm
-        androidx.core.graphics.drawable.DrawableCompat.setTint(
-            androidx.core.graphics.drawable.DrawableCompat.wrap(drawable).mutate(), tint
-        )
-        drawable.setBounds(0, 0, sizePx, sizePx)
-        drawable.draw(canvas)
-        return bm
-    }
 
-    fun resetIconCache() {
-        iconBackspace = null; iconEnter = null; iconShift = null; iconShiftLocked = null
-    }
 
     private fun loadBgIfNeeded() {
         val uri = prefs.bgImageUri
@@ -314,7 +287,6 @@ class MyKeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         val r = prefs.keyRadius
         loadBgIfNeeded()
-        loadIcons()
         canvas.drawColor(prefs.bgColor())
         // Draw background image if set
         bgBitmap?.let { bm ->
@@ -383,25 +355,13 @@ class MyKeyboardView @JvmOverloads constructor(
             textPaint.textSize = fontSize
             canvas.drawText(label, k.x+k.w/2, k.y+k.h*0.64f, textPaint)
 
-            // Draw vector icons for special keys
+            // Draw icons via Canvas paths (reliable on all devices)
             when (k.type) {
-                KeyType.BACKSPACE -> iconBackspace?.let { bm ->
-                    val bx = k.x + k.w/2 - bm.width/2
-                    val by = k.y + k.h/2 - bm.height/2
-                    canvas.drawBitmap(bm, bx, by, iconPaint)
-                }
-                KeyType.ENTER -> iconEnter?.let { bm ->
-                    val bx = k.x + k.w/2 - bm.width/2
-                    val by = k.y + k.h/2 - bm.height/2
-                    canvas.drawBitmap(bm, bx, by, iconPaint)
-                }
-                KeyType.SHIFT -> {
-                    val bm = if (isCapsLock) iconShiftLocked else iconShift
-                    bm?.let {
-                        val bx = k.x + k.w/2 - it.width/2
-                        val by = k.y + k.h/2 - it.height/2
-                        canvas.drawBitmap(it, bx, by, iconPaint)
-                    }
+                KeyType.BACKSPACE -> drawIconBackspace(canvas, k, prefs.textColor())
+                KeyType.ENTER     -> drawIconEnter(canvas, k, prefs.accentTextColor())
+                KeyType.SHIFT     -> {
+                    val col = if (isShifted || isCapsLock) prefs.accentTextColor() else prefs.textColor()
+                    drawIconShift(canvas, k, col, isCapsLock)
                 }
                 else -> {}
             }
@@ -710,6 +670,90 @@ class MyKeyboardView @JvmOverloads constructor(
             (Color.red(c1)*ir+Color.red(c2)*r).toInt(),
             (Color.green(c1)*ir+Color.green(c2)*r).toInt(),
             (Color.blue(c1)*ir+Color.blue(c2)*r).toInt())
+    }
+
+    // ─── Icon drawing via Canvas paths ────────────────────────────────────────
+
+    /** Backspace: arrow shape pointing left with X inside */
+    private fun drawIconBackspace(canvas: Canvas, k: Key, color: Int) {
+        val cx = k.x + k.w / 2f
+        val cy = k.y + k.h / 2f
+        val s  = minOf(k.w, k.h) * 0.38f   // half-size of icon
+        val sw = s * 0.22f                   // stroke width
+
+        iconStrokePaint.color = color
+        iconStrokePaint.strokeWidth = sw
+
+        // Body: pentagon/arrow shape
+        val path = Path()
+        path.moveTo(cx + s,       cy - s * 0.65f)   // top-right
+        path.lineTo(cx - s * 0.1f, cy - s * 0.65f)  // top-left body
+        path.lineTo(cx - s,       cy)                // left point
+        path.lineTo(cx - s * 0.1f, cy + s * 0.65f)  // bottom-left body
+        path.lineTo(cx + s,       cy + s * 0.65f)    // bottom-right
+        path.close()
+        canvas.drawPath(path, iconStrokePaint)
+
+        // X mark inside
+        val xOff = s * 0.15f
+        val xS   = s * 0.32f
+        canvas.drawLine(cx + xOff - xS, cy - xS, cx + xOff + xS, cy + xS, iconStrokePaint)
+        canvas.drawLine(cx + xOff - xS, cy + xS, cx + xOff + xS, cy - xS, iconStrokePaint)
+    }
+
+    /** Enter: arrow down then left (↵) */
+    private fun drawIconEnter(canvas: Canvas, k: Key, color: Int) {
+        val cx = k.x + k.w / 2f
+        val cy = k.y + k.h / 2f
+        val s  = minOf(k.w, k.h) * 0.30f
+        val sw = s * 0.25f
+
+        iconStrokePaint.color = color
+        iconStrokePaint.strokeWidth = sw
+
+        val path = Path()
+        // Vertical line going down from top-right
+        path.moveTo(cx + s,        cy - s)
+        path.lineTo(cx + s,        cy + s * 0.2f)
+        // Horizontal line going left
+        path.lineTo(cx - s * 0.6f, cy + s * 0.2f)
+
+        // Arrow head pointing down-left
+        path.moveTo(cx - s * 0.6f, cy + s * 0.2f)
+        path.lineTo(cx - s * 0.2f, cy - s * 0.3f)
+        path.moveTo(cx - s * 0.6f, cy + s * 0.2f)
+        path.lineTo(cx - s * 0.2f, cy + s * 0.7f)
+
+        canvas.drawPath(path, iconStrokePaint)
+    }
+
+    /** Shift: upward arrow / capslock with underline */
+    private fun drawIconShift(canvas: Canvas, k: Key, color: Int, isCaps: Boolean) {
+        val cx = k.x + k.w / 2f
+        val cy = k.y + k.h / 2f - k.h * 0.04f
+        val s  = minOf(k.w, k.h) * 0.32f
+        val sw = s * 0.22f
+
+        iconStrokePaint.color = color
+        iconStrokePaint.strokeWidth = sw
+
+        // Arrow body
+        val path = Path()
+        path.moveTo(cx,        cy - s)           // top point
+        path.lineTo(cx - s,    cy + s * 0.15f)   // bottom-left of arrowhead
+        path.lineTo(cx - s * 0.42f, cy + s * 0.15f)
+        path.lineTo(cx - s * 0.42f, cy + s)      // bottom-left stem
+        path.lineTo(cx + s * 0.42f, cy + s)      // bottom-right stem
+        path.lineTo(cx + s * 0.42f, cy + s * 0.15f)
+        path.lineTo(cx + s,    cy + s * 0.15f)   // bottom-right of arrowhead
+        path.close()
+        canvas.drawPath(path, iconStrokePaint)
+
+        // Underline for CapsLock
+        if (isCaps) {
+            val lineY = cy + s + sw * 1.8f
+            canvas.drawLine(cx - s, lineY, cx + s, lineY, iconStrokePaint)
+        }
     }
 
 }
