@@ -10,8 +10,6 @@ import com.google.android.material.progressindicator.LinearProgressIndicator
 
 class SetupActivity : BaseSettingsActivity() {
 
-    private lateinit var prefs: KeyboardPrefs
-
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
         setContentView(R.layout.activity_setup)
