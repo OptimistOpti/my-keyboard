@@ -29,7 +29,8 @@ class MyKeyboardView @JvmOverloads constructor(
     private val clipItems = mutableListOf<String>()
 
     // Icon bitmap cache — rendered from XML drawables
-    private var iconBackspace: Bitmap? = null
+    private var iconBackspace: Bitmap? = null        // normal state
+    private var iconBackspaceActive: Bitmap? = null  // pressed state (white)
     private var iconEnter: Bitmap? = null
     private var iconShift: Bitmap? = null
     private var iconShiftLocked: Bitmap? = null
@@ -282,10 +283,11 @@ class MyKeyboardView @JvmOverloads constructor(
         if (key == lastIconThemeKey && iconBackspace != null) return
         lastIconThemeKey = key
         val sz = (22f * context.resources.displayMetrics.density).toInt()
-        iconBackspace   = renderDrawable(R.drawable.ic_backspace,    sz, prefs.textColor())
-        iconEnter       = renderDrawable(R.drawable.ic_enter,        sz, prefs.accentColor)
-        iconShift       = renderDrawable(R.drawable.ic_shift,        sz, prefs.textColor())
-        iconShiftLocked = renderDrawable(R.drawable.ic_shift_locked, sz, prefs.accentColor)
+        iconBackspace       = renderDrawable(R.drawable.ic_backspace,    sz, prefs.textColor())
+        iconBackspaceActive = renderDrawable(R.drawable.ic_backspace,    sz, prefs.accentTextColor())
+        iconEnter           = renderDrawable(R.drawable.ic_enter,        sz, prefs.accentTextColor())
+        iconShift           = renderDrawable(R.drawable.ic_shift,        sz, prefs.textColor())
+        iconShiftLocked     = renderDrawable(R.drawable.ic_shift_locked, sz, prefs.accentTextColor())
     }
 
     private fun renderDrawable(resId: Int, sizePx: Int, tint: Int): Bitmap {
@@ -344,10 +346,17 @@ class MyKeyboardView @JvmOverloads constructor(
             }
 
             keyPaint.color = when {
+                // Backspace pressed → accent (like active CapsLock)
+                pressed && k.type == KeyType.BACKSPACE -> prefs.accentColor
+                // Enter pressed → slightly darker accent
+                pressed && k.type == KeyType.ENTER -> blend(prefs.accentColor, 0xFF000000.toInt(), 0.15f)
+                // Other keys pressed → blend toward accent
                 pressed -> blend(
                     if (isSpecial||isSmall) prefs.specialKeyColor() else prefs.keyColor(),
                     prefs.accentColor, 0.25f)
+                // Shift with caps → accent background
                 k.type == KeyType.SHIFT && (isShifted||isCapsLock) -> prefs.accentColor
+                // Enter → always accent background
                 k.type == KeyType.ENTER -> prefs.accentColor
                 isSpecial || isSmall -> prefs.specialKeyColor()
                 else -> prefs.keyColor()
@@ -387,11 +396,15 @@ class MyKeyboardView @JvmOverloads constructor(
             textPaint.textSize = fontSize
             canvas.drawText(label, k.x+k.w/2, k.y+k.h*0.64f, textPaint)
 
-            // Draw icons from cached bitmaps
+            // Draw icons — pick correct cached bitmap based on pressed/active state
             when (k.type) {
-                KeyType.BACKSPACE -> drawKeyIcon(canvas, k, iconBackspace)
-                KeyType.ENTER     -> drawKeyIcon(canvas, k, iconEnter)
-                KeyType.SHIFT     -> drawKeyIcon(canvas, k, if (isCapsLock) iconShiftLocked else iconShift)
+                KeyType.BACKSPACE -> {
+                    // pressed → white icon on accent bg; normal → textColor icon on specialKey bg
+                    val bm = if (pressed) iconBackspaceActive else iconBackspace
+                    drawKeyIcon(canvas, k, bm)
+                }
+                KeyType.ENTER -> drawKeyIcon(canvas, k, iconEnter)   // always white on accent
+                KeyType.SHIFT -> drawKeyIcon(canvas, k, if (isCapsLock) iconShiftLocked else iconShift)
                 else -> {}
             }
 
