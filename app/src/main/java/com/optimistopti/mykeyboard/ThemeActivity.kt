@@ -1,13 +1,15 @@
 package com.optimistopti.mykeyboard
 
+import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.widget.*
-import com.google.android.material.card.MaterialCardView
 import com.optimistopti.mykeyboard.databinding.ActivitySettingsBaseBinding
 
 class ThemeActivity : BaseSettingsActivity() {
     private lateinit var b: ActivitySettingsBaseBinding
+
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
         b = ActivitySettingsBaseBinding.inflate(layoutInflater)
@@ -15,21 +17,38 @@ class ThemeActivity : BaseSettingsActivity() {
         setupToolbarBack(b.toolbar, "Темы")
         setupFab(b.fab)
 
-        addSectionHeader(b.content, "Тема")
-        addToggle(b.content, "Тёмная тема", "Переключает светлую/тёмную тему", prefs.isDarkTheme) {
-            prefs.isDarkTheme = it; recreate()
+        buildContent()
+    }
+
+    private fun buildContent() {
+        b.content.removeAllViews()
+
+        addSectionHeader(b.content, "Тема оформления")
+        val modes = listOf("☀️ Day", "🌙 Night", "⬛ AMOLED")
+        val curIdx = when (prefs.themeMode) {
+            KeyboardPrefs.THEME_DAY   -> 0
+            KeyboardPrefs.THEME_AMOLED -> 2
+            else                      -> 1
+        }
+        addSegment(b.content, "Выбор темы", modes, curIdx) { idx ->
+            prefs.themeMode = when (idx) {
+                0    -> KeyboardPrefs.THEME_DAY
+                2    -> KeyboardPrefs.THEME_AMOLED
+                else -> KeyboardPrefs.THEME_NIGHT
+            }
+            recreate()
         }
 
         addDivider(b.content)
-        addSectionHeader(b.content, "Цвет акцента")
-        buildColorPicker(b.content)
+        addSectionHeader(b.content, "Цвет акцента (Material You)")
+        buildColorPicker()
     }
 
-    private fun buildColorPicker(c: LinearLayout) {
+    private fun buildColorPicker() {
         val d = resources.displayMetrics.density
         val scroll = HorizontalScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
-                setMargins((8*d).toInt(), (4*d).toInt(), (8*d).toInt(), (12*d).toInt())
+                setMargins((8*d).toInt(), (4*d).toInt(), (8*d).toInt(), (16*d).toInt())
             }
         }
         val row = LinearLayout(this).apply {
@@ -38,31 +57,41 @@ class ThemeActivity : BaseSettingsActivity() {
             setPadding((8*d).toInt(), (8*d).toInt(), (8*d).toInt(), (8*d).toInt())
         }
         KeyboardPrefs.PRESET_COLORS.forEachIndexed { i, color ->
+            val isSelected = color == prefs.accentColor
             val col = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams((68*d).toInt(), -2).apply {
+                layoutParams = LinearLayout.LayoutParams((72*d).toInt(), -2).apply {
                     setMargins((4*d).toInt(), 0, (4*d).toInt(), 0)
                 }
             }
-            val btn = android.widget.ImageButton(this).apply {
-                val sz = (52*d).toInt()
+            val circle = android.widget.ImageButton(this).apply {
+                val sz = (56*d).toInt()
                 layoutParams = LinearLayout.LayoutParams(sz, sz)
                 background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL; setColor(color)
-                    if (color == prefs.accentColor)
-                        setStroke((3*d).toInt(), if (prefs.isDarkTheme) 0xFFFFFFFF.toInt() else 0xFF000000.toInt())
+                    shape = GradientDrawable.OVAL
+                    setColor(color)
+                    if (isSelected)
+                        setStroke((3*d).toInt(), prefs.textColor())
                 }
-                setOnClickListener { prefs.accentColor = color; buildColorPicker(c.also { it.removeViewAt(it.childCount-1) }) }
+                // checkmark if selected
+                if (isSelected) setImageResource(android.R.drawable.ic_menu_done)
+                else setImageDrawable(null)
+                setColorFilter(0xFFFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
+                setOnClickListener {
+                    prefs.accentColor = color
+                    recreate()
+                }
             }
             val lbl = android.widget.TextView(this).apply {
-                text = KeyboardPrefs.COLOR_NAMES[i]; textSize = 10f
+                text = KeyboardPrefs.COLOR_NAMES[i]
+                textSize = 10f
                 gravity = android.view.Gravity.CENTER
-                setTextColor(prefs.textColor())
-                layoutParams = LinearLayout.LayoutParams(-2,-2).apply { topMargin=(4*d).toInt() }
+                setTextColor(if (isSelected) prefs.accentColor else prefs.hintTextColor())
+                layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = (4*d).toInt() }
             }
-            col.addView(btn); col.addView(lbl); row.addView(col)
+            col.addView(circle); col.addView(lbl); row.addView(col)
         }
-        scroll.addView(row); c.addView(scroll)
+        scroll.addView(row); b.content.addView(scroll)
     }
 }
