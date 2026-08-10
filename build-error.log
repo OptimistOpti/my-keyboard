@@ -49,13 +49,13 @@ Setting the namespace via the package attribute in the source AndroidManifest.xm
 Recommendation: remove package="com.optimistopti.mykeyboard" from the source AndroidManifest.xml: /home/runner/work/my-keyboard/my-keyboard/app/src/main/AndroidManifest.xml.
 
 > Task :app:processDebugManifest
-> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:compressDebugAssets
+> Task :app:processDebugManifestForPackage
 > Task :app:desugarDebugFileDependencies
 > Task :app:processDebugResources FAILED
 > Task :app:checkDebugDuplicateClasses
@@ -329,5 +329,5 @@ error: failed linking references.
 		at java.base/java.lang.Thread.run(Thread.java:840)
 
 
-BUILD FAILED in 50s
+BUILD FAILED in 39s
 21 actionable tasks: 21 executed
