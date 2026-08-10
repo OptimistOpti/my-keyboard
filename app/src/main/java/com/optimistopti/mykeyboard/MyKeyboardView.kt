@@ -2,6 +2,8 @@ package com.optimistopti.mykeyboard
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.drawable.DrawableCompat
 import android.graphics.drawable.VectorDrawable
 import android.net.Uri
 import android.graphics.*
@@ -266,19 +268,27 @@ class MyKeyboardView @JvmOverloads constructor(
     // ─── Draw ────────────────────────────────────────────────────────────────
     private fun loadIcons() {
         if (iconBackspace != null) return
-        fun vecToBitmap(resId: Int, w: Int, h: Int, tint: Int): android.graphics.Bitmap {
-            val d = androidx.core.content.ContextCompat.getDrawable(context, resId) ?: return android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
-            d.setTint(tint)
-            val bm = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
-            val c = Canvas(bm); d.setBounds(0, 0, w, h); d.draw(c)
-            return bm
-        }
-        val sz = (22 * context.resources.displayMetrics.density).toInt()
-        val tc = prefs.textColor(); val ac = prefs.accentTextColor()
-        iconBackspace   = vecToBitmap(R.drawable.ic_backspace, sz, sz, tc)
-        iconEnter       = vecToBitmap(R.drawable.ic_enter, sz, sz, ac)
-        iconShift       = vecToBitmap(R.drawable.ic_shift, sz, sz, tc)
-        iconShiftLocked = vecToBitmap(R.drawable.ic_shift_locked, sz, sz, ac)
+        val dm = context.resources.displayMetrics
+        val sz = (22 * dm.density).toInt()
+        val tc = prefs.textColor()
+        val ac = prefs.accentTextColor()
+        iconBackspace   = drawableToBitmap(R.drawable.ic_backspace,    sz, tc)
+        iconEnter       = drawableToBitmap(R.drawable.ic_enter,        sz, ac)
+        iconShift       = drawableToBitmap(R.drawable.ic_shift,        sz, tc)
+        iconShiftLocked = drawableToBitmap(R.drawable.ic_shift_locked, sz, ac)
+    }
+
+    private fun drawableToBitmap(resId: Int, sizePx: Int, tint: Int): android.graphics.Bitmap {
+        val bm = android.graphics.Bitmap.createBitmap(sizePx, sizePx, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bm)
+        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, resId)
+            ?: return bm
+        androidx.core.graphics.drawable.DrawableCompat.setTint(
+            androidx.core.graphics.drawable.DrawableCompat.wrap(drawable).mutate(), tint
+        )
+        drawable.setBounds(0, 0, sizePx, sizePx)
+        drawable.draw(canvas)
+        return bm
     }
 
     private fun resetIconCache() {
