@@ -3,7 +3,9 @@ package com.optimistopti.mykeyboard
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
-import android.widget.*
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -22,7 +24,11 @@ abstract class BaseSettingsActivity : AppCompatActivity() {
     }
 
     protected fun applyAppTheme() {
-        setTheme(if (prefs.isDarkTheme) R.style.Theme_MyKeyboard_Dark else R.style.Theme_MyKeyboard_Light)
+        setTheme(when (prefs.themeMode) {
+            KeyboardPrefs.THEME_DAY   -> R.style.Theme_MyKeyboard_Light
+            KeyboardPrefs.THEME_AMOLED -> R.style.Theme_MyKeyboard_Amoled
+            else                      -> R.style.Theme_MyKeyboard_Dark
+        })
     }
 
     protected fun setupToolbarBack(toolbar: Toolbar, title: String) {
@@ -34,6 +40,8 @@ abstract class BaseSettingsActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
     protected fun setupFab(fab: FloatingActionButton) {
+        fab.backgroundTintList =
+            android.content.res.ColorStateList.valueOf(prefs.accentColor)
         fab.setOnClickListener { showKeyboardPreview() }
     }
 
@@ -54,20 +62,21 @@ abstract class BaseSettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ── Builder helpers ───────────────────────────────────────────────────────
-
+    // ── MD3 section header ────────────────────────────────────────────────
     protected fun addSectionHeader(container: LinearLayout, text: String) {
         val d = resources.displayMetrics.density
         val tv = MaterialTextView(this).apply {
             this.text = text
-            textSize = 12f
+            textSize = 11f
             setTextColor(prefs.accentColor)
-            letterSpacing = 0.05f
-            setPadding((24*d).toInt(), (20*d).toInt(), (24*d).toInt(), (6*d).toInt())
+            letterSpacing = 0.08f
+            isAllCaps = true
+            setPadding((24*d).toInt(), (24*d).toInt(), (24*d).toInt(), (6*d).toInt())
         }
         container.addView(tv)
     }
 
+    // ── Toggle row ────────────────────────────────────────────────────────
     protected fun addToggle(
         container: LinearLayout,
         title: String,
@@ -78,13 +87,17 @@ abstract class BaseSettingsActivity : AppCompatActivity() {
         val row = layoutInflater.inflate(R.layout.item_toggle, container, false)
         row.findViewById<TextView>(R.id.toggle_title).text = title
         val sub = row.findViewById<TextView>(R.id.toggle_subtitle)
-        if (subtitle.isNotEmpty()) { sub.text = subtitle; sub.visibility = android.view.View.VISIBLE }
+        if (subtitle.isNotEmpty()) {
+            sub.text = subtitle
+            sub.visibility = android.view.View.VISIBLE
+        }
         val sw = row.findViewById<MaterialSwitch>(R.id.toggle_switch)
         sw.isChecked = current
         sw.setOnCheckedChangeListener { _, v -> onChanged(v) }
         container.addView(row)
     }
 
+    // ── Slider row ────────────────────────────────────────────────────────
     protected fun addSlider(
         container: LinearLayout,
         title: String,
@@ -103,7 +116,8 @@ abstract class BaseSettingsActivity : AppCompatActivity() {
             setPadding((24*d).toInt(), (14*d).toInt(), (24*d).toInt(), 0)
         }
         val slider = Slider(this).apply {
-            valueFrom = from; valueTo = to; value = current.coerceIn(from, to)
+            valueFrom = from; valueTo = to
+            value = current.coerceIn(from, to)
             this.stepSize = stepSize
             setPadding((12*d).toInt(), (4*d).toInt(), (12*d).toInt(), (4*d).toInt())
             addOnChangeListener { _, v, _ ->
@@ -115,16 +129,63 @@ abstract class BaseSettingsActivity : AppCompatActivity() {
         container.addView(slider)
     }
 
+    // ── Segment control (RadioGroup style) ────────────────────────────────
+    protected fun addSegment(
+        container: LinearLayout,
+        title: String,
+        options: List<String>,
+        currentIndex: Int,
+        onChanged: (Int) -> Unit
+    ) {
+        val d = resources.displayMetrics.density
+
+        val label = MaterialTextView(this).apply {
+            text = title; textSize = 14f
+            setTextColor(prefs.textColor())
+            setPadding((24*d).toInt(), (14*d).toInt(), (24*d).toInt(), (8*d).toInt())
+        }
+        container.addView(label)
+
+        val group = com.google.android.material.button.MaterialButtonToggleGroup(this).apply {
+            isSingleSelection = true
+            isSelectionRequired = true
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                setMargins((16*d).toInt(), 0, (16*d).toInt(), (12*d).toInt())
+            }
+        }
+
+        options.forEachIndexed { i, opt ->
+            val btn = com.google.android.material.button.MaterialButton(
+                this, null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                id = android.view.View.generateViewId()
+                text = opt
+                layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            }
+            group.addView(btn)
+            if (i == currentIndex) group.check(btn.id)
+        }
+
+        group.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                val idx = (0 until group.childCount).firstOrNull {
+                    group.getChildAt(it).id == checkedId
+                } ?: return@addOnButtonCheckedListener
+                onChanged(idx)
+            }
+        }
+        container.addView(group)
+    }
+
+    // ── Divider ───────────────────────────────────────────────────────────
     protected fun addDivider(container: LinearLayout) {
         val d = resources.displayMetrics.density
         val v = android.view.View(this).apply {
             layoutParams = LinearLayout.LayoutParams(-1, 1).apply {
                 setMargins((16*d).toInt(), (8*d).toInt(), (16*d).toInt(), (8*d).toInt())
             }
-            setBackgroundColor(getColor(android.R.color.transparent))
-            background = android.graphics.drawable.ColorDrawable(
-                (prefs.textColor() and 0x00FFFFFF) or 0x18000000
-            )
+            setBackgroundColor((prefs.textColor() and 0x00FFFFFF) or 0x18000000)
         }
         container.addView(v)
     }
