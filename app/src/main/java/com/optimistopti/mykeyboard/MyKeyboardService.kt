@@ -22,7 +22,6 @@ class MyKeyboardService : InputMethodService() {
         themeReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (::keyboardView.isInitialized) {
-                    keyboardView.resetIconCache()
                     keyboardView.invalidate()
                 }
             }
