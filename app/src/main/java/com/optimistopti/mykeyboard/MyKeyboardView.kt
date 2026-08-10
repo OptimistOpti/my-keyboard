@@ -291,7 +291,7 @@ class MyKeyboardView @JvmOverloads constructor(
         return bm
     }
 
-    private fun resetIconCache() {
+    fun resetIconCache() {
         iconBackspace = null; iconEnter = null; iconShift = null; iconShiftLocked = null
     }
 
