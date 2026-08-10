@@ -5,22 +5,15 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
 
-class SetupActivity : AppCompatActivity() {
+class SetupActivity : BaseSettingsActivity() {
 
     private lateinit var prefs: KeyboardPrefs
 
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
-        prefs = KeyboardPrefs(this)
-        setTheme(when (prefs.themeMode) {
-            KeyboardPrefs.THEME_DAY    -> R.style.Theme_MyKeyboard_Light
-            KeyboardPrefs.THEME_AMOLED -> R.style.Theme_MyKeyboard_Amoled
-            else                       -> R.style.Theme_MyKeyboard_Dark
-        })
         setContentView(R.layout.activity_setup)
     }
 
