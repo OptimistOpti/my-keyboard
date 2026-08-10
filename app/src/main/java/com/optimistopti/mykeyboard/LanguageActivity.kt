@@ -1,28 +1,37 @@
 package com.optimistopti.mykeyboard
+
 import android.os.Bundle
-import android.widget.*
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.optimistopti.mykeyboard.databinding.ActivitySettingsBaseBinding
+
 class LanguageActivity : BaseSettingsActivity() {
-    private lateinit var prefs: KeyboardPrefs
+    private lateinit var b: ActivitySettingsBaseBinding
     override fun onCreate(s: Bundle?) {
-        super.onCreate(s); prefs = KeyboardPrefs(this)
-        setTheme(if (prefs.isDarkTheme) R.style.Theme_MyKeyboard_Dark else R.style.Theme_MyKeyboard_Light)
-        setContentView(R.layout.activity_language); title = "Язык"
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        addKeyboardFab()
-        val container = findViewById<LinearLayout>(R.id.language_container)
-        val langs = mapOf("ru" to "🇷🇺  Русский","uk" to "🇺🇦  Українська","en" to "🇬🇧  English")
+        super.onCreate(s)
+        b = ActivitySettingsBaseBinding.inflate(layoutInflater)
+        setContentView(b.root)
+        setupToolbarBack(b.toolbar, "Язык")
+        setupFab(b.fab)
+
+        val langs = linkedMapOf("ru" to "🇷🇺  Русский", "uk" to "🇺🇦  Українська", "en" to "🇬🇧  English")
         val enabled = prefs.enabledLanguages.split(",").toMutableSet()
+
+        addSectionHeader(b.content, "Активные языки")
         langs.forEach { (code, name) ->
-            val row = layoutInflater.inflate(R.layout.item_toggle, container, false)
-            row.findViewById<TextView>(R.id.toggle_title).text = name
-            val sw = row.findViewById<Switch>(R.id.toggle_switch); sw.isChecked = code in enabled
-            sw.setOnCheckedChangeListener { _, checked ->
-                if (checked) enabled.add(code) else enabled.remove(code)
-                if (enabled.isEmpty()) { enabled.add(code); sw.isChecked = true }
+            addToggle(b.content, name, current = code in enabled) { on ->
+                if (on) enabled.add(code) else enabled.remove(code)
+                if (enabled.isEmpty()) enabled.add(code)
                 prefs.enabledLanguages = enabled.joinToString(",")
             }
-            container.addView(row)
+        }
+
+        addSectionHeader(b.content, "Основной язык")
+        val primary = listOf("ru", "uk", "en")
+        primary.forEach { code ->
+            val name = langs[code] ?: return@forEach
+            addToggle(b.content, name, current = prefs.primaryLanguage == code) { on ->
+                if (on) prefs.primaryLanguage = code
+            }
         }
     }
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 }
