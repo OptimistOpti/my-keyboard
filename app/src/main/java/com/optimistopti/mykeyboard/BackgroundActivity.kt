@@ -2,93 +2,74 @@ package com.optimistopti.mykeyboard
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
+import com.optimistopti.mykeyboard.databinding.ActivitySettingsBaseBinding
 
 class BackgroundActivity : BaseSettingsActivity() {
-    private lateinit var prefs: KeyboardPrefs
-    private val PICK_IMAGE = 1001
+    private lateinit var b: ActivitySettingsBaseBinding
+    private val PICK = 1001
+    private lateinit var statusTv: TextView
 
     override fun onCreate(s: Bundle?) {
-        super.onCreate(s); prefs = KeyboardPrefs(this)
-        setTheme(if (prefs.isDarkTheme) R.style.Theme_MyKeyboard_Dark else R.style.Theme_MyKeyboard_Light)
-        setContentView(R.layout.activity_background); title = "Фон клавиатуры"
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        addKeyboardFab()
+        super.onCreate(s)
+        b = ActivitySettingsBaseBinding.inflate(layoutInflater)
+        setContentView(b.root)
+        setupToolbarBack(b.toolbar, "Фон клавиатуры")
+        setupFab(b.fab)
+
+        addSectionHeader(b.content, "Изображение")
+
         val d = resources.displayMetrics.density
-        val c = findViewById<LinearLayout>(R.id.background_container)
-
-        // Current image preview
-        val previewLabel = TextView(this).apply {
-            text = if (prefs.bgImageUri.isEmpty()) "Фон: не выбран" else "Фон: изображение выбрано ✅"
-            textSize = 15f; setTextColor(prefs.textColor())
-            setPadding((20*d).toInt(),(16*d).toInt(),(20*d).toInt(),(4*d).toInt())
+        // Status text
+        statusTv = android.widget.TextView(this).apply {
+            text = if (prefs.bgImageUri.isEmpty()) "Фон не выбран" else "✅ Изображение выбрано"
+            textSize = 14f; setTextColor(prefs.hintTextColor())
+            setPadding((24*d).toInt(), (4*d).toInt(), (24*d).toInt(), (8*d).toInt())
         }
-        c.addView(previewLabel)
+        b.content.addView(statusTv)
 
-        // Pick image button
-        val btnPick = android.widget.Button(this).apply {
-            text = "Выбрать изображение из галереи"
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
-                setMargins((20*d).toInt(),(8*d).toInt(),(20*d).toInt(),(8*d).toInt())
-            }
-            setOnClickListener {
-                val intent = Intent(Intent.ACTION_PICK).apply { type = "image/*" }
-                startActivityForResult(intent, PICK_IMAGE)
-            }
+        // Pick button
+        val btnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding((16*d).toInt(), (4*d).toInt(), (16*d).toInt(), (8*d).toInt())
         }
-        c.addView(btnPick)
-
-        // Remove image button
-        val btnRemove = android.widget.Button(this).apply {
+        val btnPick = MaterialButton(this).apply {
+            text = "Выбрать из галереи"
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = (8*d).toInt() }
+            setOnClickListener { startActivityForResult(Intent(Intent.ACTION_PICK).apply { type = "image/*" }, PICK) }
+        }
+        val btnClear = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "Убрать фон"
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
-                setMargins((20*d).toInt(),0,(20*d).toInt(),(16*d).toInt())
-            }
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
             setOnClickListener {
-                prefs.bgImageUri = ""
-                previewLabel.text = "Фон: не выбран"
-                Toast.makeText(this@BackgroundActivity, "Фон убран", Toast.LENGTH_SHORT).show()
+                prefs.bgImageUri = ""; statusTv.text = "Фон не выбран"
+                Snackbar.make(b.root, "Фон убран", Snackbar.LENGTH_SHORT).show()
             }
         }
-        c.addView(btnRemove)
+        btnRow.addView(btnPick); btnRow.addView(btnClear); b.content.addView(btnRow)
 
-        addSeek(c, d, "Яркость фона", prefs.bgImageOpacity, 0, 100) {
-            prefs.bgImageOpacity = it; previewLabel.text = if (prefs.bgImageUri.isEmpty()) "Фон: не выбран" else "Фон: изображение ✅"
-        }
-        addSeek(c, d, "Размытие фона", prefs.bgBlurRadius, 0, 25) { prefs.bgBlurRadius = it }
-        addSeek(c, d, "Прозрачность клавиш (0=прозрачно, 255=непрозрачно)", prefs.keyAlpha, 0, 255) { prefs.keyAlpha = it }
+        addDivider(b.content)
+        addSectionHeader(b.content, "Настройка фона")
+        addSlider(b.content, "Яркость фона", prefs.bgImageOpacity.toFloat(), 0f, 100f,
+            labelFormatter = { "${it.toInt()}%" }) { prefs.bgImageOpacity = it.toInt() }
+
+        addDivider(b.content)
+        addSectionHeader(b.content, "Клавиши поверх фона")
+        addSlider(b.content, "Непрозрачность клавиш", prefs.keyAlpha.toFloat(), 0f, 255f,
+            labelFormatter = { "${(it/255*100).toInt()}%" }) { prefs.keyAlpha = it.toInt() }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_IMAGE && resultCode == Activity.RESULT_OK) {
+    override fun onActivityResult(req: Int, res: Int, data: Intent?) {
+        super.onActivityResult(req, res, data)
+        if (req == PICK && res == Activity.RESULT_OK) {
             val uri = data?.data ?: return
-            // Persist permission
             try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
             prefs.bgImageUri = uri.toString()
-            Toast.makeText(this, "Фон выбран ✅", Toast.LENGTH_SHORT).show()
-            recreate()
+            statusTv.text = "✅ Изображение выбрано"
+            Snackbar.make(b.root, "Фон сохранён ✅", Snackbar.LENGTH_SHORT).show()
         }
     }
-
-    private fun addSeek(c: LinearLayout, d: Float, name: String, cur: Int, min: Int, max: Int, save: (Int)->Unit) {
-        val label = TextView(this).apply {
-            text = "$name: $cur"; textSize = 14f; setTextColor(prefs.textColor())
-            setPadding((20*d).toInt(),(12*d).toInt(),(20*d).toInt(),0)
-        }
-        val seek = SeekBar(this).apply {
-            this.max = max-min; progress = cur-min
-            setPadding((20*d).toInt(),(4*d).toInt(),(20*d).toInt(),(8*d).toInt())
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, v: Int, u: Boolean) { val r=v+min; label.text="$name: $r"; save(r) }
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-        }
-        c.addView(label); c.addView(seek)
-    }
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 }
