@@ -7,20 +7,16 @@
         <item name="colorOnPrimaryContainer">#FF21005D</item>
         <item name="colorSecondary">#FF625B71</item>
         <item name="colorOnSecondary">#FFFFFFFF</item>
-        <item name="colorSecondaryContainer">#FFE8DEF8</item>
-        <item name="colorOnSecondaryContainer">#FF1D192B</item>
-        <item name="colorTertiary">#FF7D5260</item>
-        <item name="colorOnTertiary">#FFFFFFFF</item>
-        <item name="colorTertiaryContainer">#FFFFD8E4</item>
-        <item name="colorOnTertiaryContainer">#FF31111D</item>
-        <item name="colorError">#FFB3261E</item>
-        <item name="colorOnError">#FFFFFFFF</item>
+        <item name="colorSecondaryContainer">#FF4A4458</item>
+        <item name="colorOnSecondaryContainer">#FFE8DEF8</item>
         <item name="colorSurface">#FF141218</item>
         <item name="colorOnSurface">#FFE6E1E5</item>
         <item name="colorSurfaceVariant">#FF49454F</item>
         <item name="colorOnSurfaceVariant">#FFCAC4D0</item>
         <item name="colorOutline">#FF938F99</item>
         <item name="colorOutlineVariant">#FF49454F</item>
+        <item name="colorError">#FFCF6679</item>
+        <item name="colorOnError">#FF690020</item>
         <item name="android:colorBackground">#FF141218</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -36,22 +32,41 @@
         <item name="colorOnSecondary">#FFFFFFFF</item>
         <item name="colorSecondaryContainer">#FFE8DEF8</item>
         <item name="colorOnSecondaryContainer">#FF1D192B</item>
-        <item name="colorTertiary">#FF7D5260</item>
-        <item name="colorOnTertiary">#FFFFFFFF</item>
-        <item name="colorTertiaryContainer">#FFFFD8E4</item>
-        <item name="colorOnTertiaryContainer">#FF31111D</item>
-        <item name="colorError">#FFB3261E</item>
-        <item name="colorOnError">#FFFFFFFF</item>
         <item name="colorSurface">#FFFEF7FF</item>
         <item name="colorOnSurface">#FF1C1B1F</item>
         <item name="colorSurfaceVariant">#FFE7E0EC</item>
         <item name="colorOnSurfaceVariant">#FF49454F</item>
         <item name="colorOutline">#FF79747E</item>
         <item name="colorOutlineVariant">#FFCAC4D0</item>
+        <item name="colorError">#FFB3261E</item>
+        <item name="colorOnError">#FFFFFFFF</item>
         <item name="android:colorBackground">#FFFEF7FF</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.MyKeyboard.Amoled" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#FFD0BCFF</item>
+        <item name="colorOnPrimary">#FF381E72</item>
+        <item name="colorPrimaryContainer">#FF4F378B</item>
+        <item name="colorOnPrimaryContainer">#FFEADDFF</item>
+        <item name="colorSecondary">#FFCCC2DC</item>
+        <item name="colorOnSecondary">#FF332D41</item>
+        <item name="colorSecondaryContainer">#FF1A0040</item>
+        <item name="colorOnSecondaryContainer">#FFCCC2DC</item>
+        <item name="colorSurface">#FF000000</item>
+        <item name="colorOnSurface">#FFE6E1E5</item>
+        <item name="colorSurfaceVariant">#FF1A1A1A</item>
+        <item name="colorOnSurfaceVariant">#FFCAC4D0</item>
+        <item name="colorOutline">#FF938F99</item>
+        <item name="colorOutlineVariant">#FF2A2A2A</item>
+        <item name="colorError">#FFCF6679</item>
+        <item name="colorOnError">#FF690020</item>
+        <item name="android:colorBackground">#FF000000</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <style name="Theme.MyKeyboard" parent="Theme.MyKeyboard.Dark"/>
