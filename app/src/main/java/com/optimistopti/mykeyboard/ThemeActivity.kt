@@ -1,8 +1,6 @@
 package com.optimistopti.mykeyboard
 
-import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.widget.*
 import com.optimistopti.mykeyboard.databinding.ActivitySettingsBaseBinding
@@ -74,10 +72,7 @@ class ThemeActivity : BaseSettingsActivity() {
                     if (isSelected)
                         setStroke((3*d).toInt(), prefs.textColor())
                 }
-                // checkmark if selected
-                if (isSelected) setImageResource(android.R.drawable.ic_menu_done)
-                else setImageDrawable(null)
-                setColorFilter(0xFFFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
+                setImageDrawable(null)
                 setOnClickListener {
                     prefs.accentColor = color
                     recreate()
