@@ -5,8 +5,8 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.optimistopti.mykeyboard.databinding.ActivityMainBinding
@@ -18,26 +18,44 @@ class MainActivity : BaseSettingsActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Redirect to setup if keyboard not yet enabled
+        if (!isKeyboardEnabled()) {
+            startActivity(Intent(this, SetupActivity::class.java))
+            finish()
+            return
+        }
+
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
         setSupportActionBar(b.toolbar)
+        supportActionBar?.title = ""
         setupFab(b.fab)
         buildList()
         updateStatus()
     }
 
-    override fun onResume() { super.onResume(); updateStatus() }
+    override fun onResume() {
+        super.onResume()
+        if (!::b.isInitialized) return
+        updateStatus()
+    }
+
+    private fun isKeyboardEnabled(): Boolean {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        return imm.enabledInputMethodList.any { it.packageName == packageName }
+    }
 
     private fun buildList() {
         val items = listOf(
-            Item("🌐", "Язык",          langSub(),                             LanguageActivity::class.java),
-            Item("🎨", "Темы",          "Цвет акцента, светлая/тёмная",       ThemeActivity::class.java),
-            Item("🖼️", "Фон",           "Изображение, прозрачность",          BackgroundActivity::class.java),
-            Item("📐", "Внешний вид",   "Высота, скругление, отступы",        AppearanceActivity::class.java),
-            Item("🔊", "Звук и вибрация","Нажатие, интенсивность",            SoundActivity::class.java),
-            Item("⌨️", "Клавиши",       "Цифры, попап, подсказки",            KeysActivity::class.java),
-            Item("✏️", "Ввод текста",   "Автокоррекция, предсказание",        TextInputActivity::class.java),
-            Item("👆", "Жесты",         "Свайп-набор, удаление жестом",       GesturesActivity::class.java)
+            Item("🌐", "Язык",           langSub(),                        LanguageActivity::class.java),
+            Item("🎨", "Темы",           "Цвет, Day / Night / AMOLED",     ThemeActivity::class.java),
+            Item("🖼️", "Фон",            "Изображение, прозрачность",      BackgroundActivity::class.java),
+            Item("📐", "Внешний вид",    "Высота, скругление, отступы",    AppearanceActivity::class.java),
+            Item("🔊", "Звук и вибрация","Нажатие, интенсивность",         SoundActivity::class.java),
+            Item("⌨️", "Клавиши",        "Цифры, попап, подсказки",        KeysActivity::class.java),
+            Item("✏️", "Ввод текста",    "Автокоррекция, предсказание",    TextInputActivity::class.java),
+            Item("👆", "Жесты",          "Свайп-набор, удаление жестом",   GesturesActivity::class.java)
         )
 
         b.rv.layoutManager = LinearLayoutManager(this)
@@ -53,11 +71,6 @@ class MainActivity : BaseSettingsActivity() {
                 h.root.setOnClickListener { startActivity(Intent(this@MainActivity, item.target)) }
             }
         }
-
-        b.btnEnable.setOnClickListener { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) }
-        b.btnSelect.setOnClickListener {
-            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker()
-        }
     }
 
     private fun langSub(): String {
@@ -68,9 +81,8 @@ class MainActivity : BaseSettingsActivity() {
     private fun updateStatus() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         val on = imm.enabledInputMethodList.any { it.packageName == packageName }
-        b.tvStatus.text = if (on) "✅ Активна" else "⚠️ Клавиатура не включена"
+        b.tvStatus.text = if (on) "✅ Активна" else "⚠️ Не включена"
         b.tvStatus.setTextColor(if (on) 0xFF4CAF50.toInt() else 0xFFEF5350.toInt())
-        b.btnEnable.visibility = if (on) View.GONE else View.VISIBLE
     }
 
     inner class VH(val root: View) : RecyclerView.ViewHolder(root) {
