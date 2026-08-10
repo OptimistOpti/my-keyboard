@@ -146,6 +146,7 @@ class MyKeyboardView @JvmOverloads constructor(
     fun setKeyboardService(s: MyKeyboardService) { service = s }
 
     fun reset() {
+        lastIconThemeKey = ""
         val langs = allLangs
         currentLangIndex = langs.indexOf(prefs.primaryLanguage).coerceAtLeast(0)
         isShifted = false; isCapsLock = false
@@ -280,6 +281,7 @@ class MyKeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         val r = prefs.keyRadius
         loadBgIfNeeded()
+        loadIconsIfNeeded()
         canvas.drawColor(prefs.bgColor())
         // Draw background image if set
         bgBitmap?.let { bm ->
