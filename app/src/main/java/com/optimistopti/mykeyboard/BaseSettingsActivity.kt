@@ -1,6 +1,10 @@
 package com.optimistopti.mykeyboard
 
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -16,11 +20,24 @@ import com.google.android.material.textview.MaterialTextView
 abstract class BaseSettingsActivity : AppCompatActivity() {
 
     protected lateinit var prefs: KeyboardPrefs
+    private var themeReceiver: BroadcastReceiver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = KeyboardPrefs(this)
         applyAppTheme()
+        // Listen for real-time theme/accent changes from ThemeActivity
+        themeReceiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                prefs = KeyboardPrefs(this@BaseSettingsActivity)
+                recreate()
+            }
+        }
+        try {
+            registerReceiver(themeReceiver,
+                IntentFilter(ThemeActivity.ACTION_THEME_CHANGED),
+                Context.RECEIVER_NOT_EXPORTED)
+        } catch (_: Exception) {}
     }
 
     protected fun applyAppTheme() {
@@ -35,6 +52,13 @@ abstract class BaseSettingsActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.title = title
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        themeReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
