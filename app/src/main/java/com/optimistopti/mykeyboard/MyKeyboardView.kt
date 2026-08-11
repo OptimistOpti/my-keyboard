@@ -1,8 +1,6 @@
 package com.optimistopti.mykeyboard
 
 import android.content.Context
-import android.graphics.BitmapFactory
-import android.net.Uri
 import android.graphics.*
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -19,132 +17,143 @@ class MyKeyboardView @JvmOverloads constructor(
     private var service: MyKeyboardService? = null
     val prefs = KeyboardPrefs(context)
 
+    // ── State ─────────────────────────────────────────────────────────────────
     private var currentLangIndex = 0
     private var isShifted = false
     private var isCapsLock = false
     private var lastShiftTime = 0L
-    private var showStickers = false
-    private var showNumbers = false
-    private var showClipboard = false
-    private val clipItems = mutableListOf<String>()
+    private var keyboardMode = Mode.ALPHA   // ALPHA | NUMERIC | SYMBOL | STICKER | CLIPBOARD
 
-    // Icon bitmap cache — rendered from XML drawables
-    private var iconBackspace: Bitmap? = null        // normal state
-    private var iconBackspaceActive: Bitmap? = null  // pressed state (white)
-    private var iconEnter: Bitmap? = null            // normal state
-    private var iconEnterActive: Bitmap? = null      // pressed state (white)
-    private var iconShift: Bitmap? = null
-    private var iconShiftLocked: Bitmap? = null
-    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var lastIconThemeKey: String = "" 
-    private var bgBitmap: android.graphics.Bitmap? = null
+    enum class Mode { ALPHA, NUMERIC, SYMBOL, STICKER, CLIPBOARD }
 
-    private var bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var lastBgUri: String = ""
-
-    // Touch tracking
+    // ── Touch ─────────────────────────────────────────────────────────────────
     private var touchStartX = 0f
     private var touchStartY = 0f
     private var swipePath = mutableListOf<PointF>()
     private var isSwipeMode = false
     private var swipeOnSpace = false
-    private var swipeStartedOnBackspace = false
-
-    // Long press
-    private var longPressRunnable: Runnable? = null
-    private val longPressDelay = 400L
-    private val repeatDelay = 50L
-    private var isLongPressing = false
-
-    // Popup
-    private var popupKey: Key? = null
-
-    // Paints
-    private val keyPaint      = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val shadowPaint   = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val textPaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
-    }
-    private val hintPaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
-    }
-    private val swipePaint    = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 7f
-        strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
-    }
-    private val popupPaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val popupTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-    }
-
-    private val keys        = mutableListOf<Key>()
-    private val stickerKeys = mutableListOf<Key>()
-    private val clipKeys    = mutableListOf<Key>()
+    private var swipeOnBackspace = false
     private var pressedKey: Key? = null
 
-    enum class KeyType {
-        CHAR, BACKSPACE, SHIFT, ENTER, SPACE, NUMBERS,
-        STICKER, LANG, COMMA, PERIOD, CLIP_ITEM, CLIP_CLOSE,
-        ARROW_LEFT, ARROW_RIGHT  // kept for potential future use
+    // Long press repeat
+    private var longPressRunnable: Runnable? = null
+    private val LONG_PRESS_DELAY = 400L
+    private val REPEAT_DELAY     = 50L
+    private var isRepeating = false
+
+    // Clipboard
+    private val clipItems = mutableListOf<String>()
+
+    // ── Icon cache ────────────────────────────────────────────────────────────
+    private var iconBackspace: Bitmap? = null
+    private var iconBackspaceActive: Bitmap? = null
+    private var iconEnter: Bitmap? = null
+    private var iconEnterActive: Bitmap? = null
+    private var iconShift: Bitmap? = null
+    private var iconShiftActive: Bitmap? = null
+    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var iconThemeKey = ""
+
+    // ── Paints ────────────────────────────────────────────────────────────────
+    private val keyPaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val shadowPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val textPaint    = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface  = Typeface.create("sans-serif", Typeface.NORMAL)
     }
+    private val hintPaint    = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.RIGHT
+        typeface  = Typeface.create("sans-serif", Typeface.NORMAL)
+    }
+    private val popupPaint   = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val popupTxtPaint= Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface  = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        color     = 0xFFFFFFFF.toInt()
+    }
+    private val bgImagePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    // ── Keys ──────────────────────────────────────────────────────────────────
+    private val keys     = mutableListOf<Key>()
+    private var popupKey: Key? = null
+
+    enum class KeyType {
+        CHAR, BACKSPACE, SHIFT, ENTER, SPACE,
+        NUMBERS, SYMBOL_PAGE, BACK_ALPHA,
+        COMMA, PERIOD, STICKER, LANG,
+        CLIP_ITEM, CLIP_CLOSE
+    }
+
     data class Key(
         var x: Float, var y: Float, var w: Float, var h: Float,
-        val label: String, val type: KeyType = KeyType.CHAR,
-        val altLabel: String = ""
+        val label: String,
+        val type: KeyType = KeyType.CHAR,
+        val hint: String  = ""
     )
 
+    // ── Layouts ───────────────────────────────────────────────────────────────
     private val allLangs get() = prefs.enabledLanguages.split(",")
 
-    private val numberRow   = listOf("1","2","3","4","5","6","7","8","9","0")
-    private val numberHints = listOf("!","@","#","\$","%","^","&","*","(",")")
-
-    // Bottom row tokens: ?123 | , | SPACE | . | ENTER
-    // (comma left of space, period right of space)
-    private val ruRows = listOf(
+    // Russian
+    private val ruAlpha = listOf(
         listOf("й","ц","у","к","е","н","г","ш","щ","з","х"),
         listOf("ф","ы","в","а","п","р","о","л","д","ж","э"),
         listOf("SHIFT","я","ч","с","м","и","т","ь","б","ю","BACK"),
         listOf("?123","COMMA","SPACE","PERIOD","ENTER")
     )
-    private val ruRowsUp = listOf(
+    private val ruAlphaCaps = listOf(
         listOf("Й","Ц","У","К","Е","Н","Г","Ш","Щ","З","Х"),
         listOf("Ф","Ы","В","А","П","Р","О","Л","Д","Ж","Э"),
         listOf("SHIFT","Я","Ч","С","М","И","Т","Ь","Б","Ю","BACK"),
         listOf("?123","COMMA","SPACE","PERIOD","ENTER")
     )
-    private val ukRows = listOf(
+    // Ukrainian
+    private val ukAlpha = listOf(
         listOf("й","ц","у","к","е","н","г","ш","щ","з","х"),
         listOf("ф","і","в","а","п","р","о","л","д","ж","є"),
         listOf("SHIFT","я","ч","с","м","и","т","ь","б","ю","BACK"),
         listOf("?123","COMMA","SPACE","PERIOD","ENTER")
     )
-    private val ukRowsUp = listOf(
+    private val ukAlphaCaps = listOf(
         listOf("Й","Ц","У","К","Е","Н","Г","Ш","Щ","З","Х"),
         listOf("Ф","І","В","А","П","Р","О","Л","Д","Ж","Є"),
         listOf("SHIFT","Я","Ч","С","М","И","Т","Ь","Б","Ю","BACK"),
         listOf("?123","COMMA","SPACE","PERIOD","ENTER")
     )
-    private val enRows = listOf(
+    // English
+    private val enAlpha = listOf(
         listOf("q","w","e","r","t","y","u","i","o","p"),
         listOf("a","s","d","f","g","h","j","k","l"),
         listOf("SHIFT","z","x","c","v","b","n","m","BACK"),
         listOf("?123","COMMA","SPACE","PERIOD","ENTER")
     )
-    private val enRowsUp = listOf(
+    private val enAlphaCaps = listOf(
         listOf("Q","W","E","R","T","Y","U","I","O","P"),
         listOf("A","S","D","F","G","H","J","K","L"),
         listOf("SHIFT","Z","X","C","V","B","N","M","BACK"),
         listOf("?123","COMMA","SPACE","PERIOD","ENTER")
     )
-    private val numRows = listOf(
+
+    // Number page 1 — like GBoard/FlorisBoard
+    // Row hints: what appears on long-press
+    private val numPage1 = listOf(
         listOf("1","2","3","4","5","6","7","8","9","0"),
-        listOf("@","#","$","%","&","*","(",")","_","+"),
-        listOf("=","/",":",";","'","\"",",",".","!","?"),
-        listOf("ABC","SPACE","ENTER")
+        listOf("@","#","$","%","&","-","+","(",")","/"),
+        listOf("=\\<","*","\"","'",":",";","!","?","BACK"),
+        listOf("ABC","COMMA","SPACE","PERIOD","ENTER")
     )
+    // Hints for num page 1 row 0
+    private val numHints1 = listOf("~","`","|","•","√","π","÷","×","¶","∆")
+
+    // Symbol page 2
+    private val numPage2 = listOf(
+        listOf("~","`","|","•","√","π","÷","×","¶","∆"),
+        listOf("£","¢","€","¥","^","°","=","{","}","\\"),
+        listOf("?123","<",">","[","]","_","—","…",",","BACK"),
+        listOf("ABC","COMMA","SPACE","PERIOD","ENTER")
+    )
+
+    // Stickers
     private val stickers = listOf(
         "😀","😂","🥰","😎","🤔","😴","🤩","😭",
         "👍","👎","🙏","🤝","✌️","🤞","💪","👏",
@@ -153,15 +162,15 @@ class MyKeyboardView @JvmOverloads constructor(
         "🐶","🐱","🦊","🐻","🎵","🎮","🍕","☕"
     )
 
+    // ── Public API ────────────────────────────────────────────────────────────
     fun setKeyboardService(s: MyKeyboardService) { service = s }
 
     fun reset() {
-        lastIconThemeKey = ""
-        val langs = allLangs
-        currentLangIndex = langs.indexOf(prefs.primaryLanguage).coerceAtLeast(0)
+        currentLangIndex = allLangs.indexOf(prefs.primaryLanguage).coerceAtLeast(0)
         isShifted = false; isCapsLock = false
-        showStickers = false; showNumbers = false; showClipboard = false
-        stopLongPress()
+        keyboardMode = Mode.ALPHA
+        iconThemeKey = ""
+        stopRepeat()
         rebuildKeys(); invalidate()
     }
 
@@ -169,563 +178,523 @@ class MyKeyboardView @JvmOverloads constructor(
         super.onSizeChanged(w, h, ow, oh); rebuildKeys()
     }
 
-    private fun currentRows(): List<List<String>> {
-        val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
-        return when (lang) {
-            "uk" -> if (isShifted || isCapsLock) ukRowsUp else ukRows
-            "en" -> if (isShifted || isCapsLock) enRowsUp else enRows
-            else -> if (isShifted || isCapsLock) ruRowsUp else ruRows
-        }
-    }
-
+    // ── Key building ──────────────────────────────────────────────────────────
     private fun rebuildKeys() {
-        keys.clear(); stickerKeys.clear(); clipKeys.clear()
-        val pad = prefs.keyPaddingDp.toFloat()
-        val baseRows = currentRows()
-        val rows = if (prefs.showNumberRow && !showNumbers) listOf(numberRow) + baseRows else baseRows
-        val displayRows = if (showNumbers) numRows else rows
-        val rh = height.toFloat() / displayRows.size
+        keys.clear()
+        when (keyboardMode) {
+            Mode.ALPHA     -> buildAlpha()
+            Mode.NUMERIC   -> buildGrid(numPage1, addNumHints = true)
+            Mode.SYMBOL    -> buildGrid(numPage2, addNumHints = false)
+            Mode.STICKER   -> buildStickers()
+            Mode.CLIPBOARD -> buildClipboard()
+        }
+    }
 
-        displayRows.forEachIndexed { ri, row ->
-            val y = ri * rh + pad; val h = rh - pad * 2
-            val isNumRowLine = prefs.showNumberRow && !showNumbers && ri == 0
-            when {
-                ri == displayRows.size - 1 -> buildBottom(row, y, h, pad)
-                ri == displayRows.size - 2 && !showNumbers -> buildShiftRow(row, y, h, pad)
-                isNumRowLine -> buildNumberRow(row, y, h, pad)
-                else -> buildNormal(row, y, h, pad)
+    private fun buildAlpha() {
+        val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
+        val rows = when (lang) {
+            "uk" -> if (isShifted || isCapsLock) ukAlphaCaps else ukAlpha
+            "en" -> if (isShifted || isCapsLock) enAlphaCaps else enAlpha
+            else -> if (isShifted || isCapsLock) ruAlphaCaps else ruAlpha
+        }
+        val d = prefs.keyPaddingDp.toFloat()
+        val rh = height.toFloat() / rows.size
+
+        rows.forEachIndexed { ri, row ->
+            val y = ri * rh + d; val h = rh - d * 2
+            when (ri) {
+                rows.size - 1 -> buildBottomRow(row, y, h, d)
+                rows.size - 2 -> buildShiftRow(row, y, h, d)
+                else          -> buildNormalRow(row, y, h, d)
             }
         }
-
-        // Stickers
-        val cols = 8; val sRows = stickers.size / cols
-        val sw = width.toFloat() / cols; val sh = height.toFloat() / (sRows + 1)
-        stickers.forEachIndexed { i, s ->
-            stickerKeys.add(Key((i%cols)*sw+pad, (i/cols)*sh+pad, sw-pad*2, sh-pad*2, s))
-        }
-        stickerKeys.add(Key(pad, sRows*sh+pad, width-pad*2, sh-pad*2, "← Назад", KeyType.CLIP_CLOSE))
-
-        // Clipboard
-        buildClipboardKeys(pad)
     }
 
-    private fun buildNormal(row: List<String>, y: Float, h: Float, pad: Float) {
-        val kw = (width.toFloat() - pad*(row.size+1)) / row.size
-        row.forEachIndexed { i, l -> keys.add(Key(pad + i*(kw+pad), y, kw, h, l)) }
-    }
-
-    private fun buildNumberRow(row: List<String>, y: Float, h: Float, pad: Float) {
-        val kw = (width.toFloat() - pad*(row.size+1)) / row.size
+    private fun buildNormalRow(row: List<String>, y: Float, h: Float, d: Float) {
+        val kw = (width.toFloat() - d * (row.size + 1)) / row.size
         row.forEachIndexed { i, l ->
-            keys.add(Key(pad + i*(kw+pad), y, kw, h, l, altLabel = numberHints.getOrElse(i){""}))
+            keys.add(Key(d + i * (kw + d), y, kw, h, l))
         }
     }
 
-    private fun buildShiftRow(row: List<String>, y: Float, h: Float, pad: Float) {
-        val sw = width * 0.125f; val cc = row.size - 2
-        val cw = (width - sw*2 - pad*(cc+3)) / cc; var x = pad
+    private fun buildShiftRow(row: List<String>, y: Float, h: Float, d: Float) {
+        val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
+        val isEn = lang == "en"
+        // English has 9 chars, RU/UK has 10
+        val charCount = row.size - 2
+        val sideW = width * (if (isEn) 0.135f else 0.118f)
+        val kw = (width - sideW * 2 - d * (charCount + 3)) / charCount
+        var x = d
         row.forEach { l ->
             when (l) {
-                "SHIFT" -> { keys.add(Key(x,y,sw,h,"⇧",KeyType.SHIFT)); x+=sw+pad }
-                "BACK"  -> { keys.add(Key(x,y,sw,h,"⌫",KeyType.BACKSPACE)); x+=sw+pad }
-                else    -> { keys.add(Key(x,y,cw,h,l)); x+=cw+pad }
+                "SHIFT" -> { keys.add(Key(x, y, sideW, h, "⇧", KeyType.SHIFT)); x += sideW + d }
+                "BACK"  -> { keys.add(Key(x, y, sideW, h, "⌫", KeyType.BACKSPACE)); x += sideW + d }
+                else    -> { keys.add(Key(x, y, kw, h, l)); x += kw + d }
             }
         }
     }
 
-    private fun buildBottom(row: List<String>, y: Float, h: Float, pad: Float) {
-        // ?123 | , | < ЯЗЫК > | . | ↵
-        val numW   = width * 0.115f
+    private fun buildBottomRow(row: List<String>, y: Float, h: Float, d: Float) {
+        // ?123 | , | ‹ LANG › | . | ↵
+        val numW    = width * 0.110f
+        val smallW  = width * 0.085f
+        val enterW  = width * 0.125f
+        val spaceW  = width - numW - smallW * 2 - enterW - d * 5
+        var x = d
+        row.forEach { l ->
+            when (l) {
+                "?123"   -> { keys.add(Key(x, y, numW,   h, l, KeyType.NUMBERS));  x += numW   + d }
+                "COMMA"  -> { keys.add(Key(x, y, smallW, h, ",", KeyType.COMMA));  x += smallW + d }
+                "SPACE"  -> { keys.add(Key(x, y, spaceW, h, "space", KeyType.SPACE)); x += spaceW + d }
+                "PERIOD" -> { keys.add(Key(x, y, smallW, h, ".", KeyType.PERIOD)); x += smallW + d }
+                "ENTER"  -> { keys.add(Key(x, y, enterW, h, "↵", KeyType.ENTER));  x += enterW + d }
+                else     -> { keys.add(Key(x, y, numW,   h, l, KeyType.NUMBERS));  x += numW   + d }
+            }
+        }
+    }
+
+    private fun buildGrid(rows: List<List<String>>, addNumHints: Boolean) {
+        val d = prefs.keyPaddingDp.toFloat()
+        val rh = height.toFloat() / rows.size
+        rows.forEachIndexed { ri, row ->
+            val y = ri * rh + d; val h = rh - d * 2
+            when {
+                ri == rows.size - 1 -> buildNumBottomRow(row, y, h, d)
+                ri == rows.size - 2 -> buildNumShiftRow(row, y, h, d)
+                else -> {
+                    val kw = (width.toFloat() - d * (row.size + 1)) / row.size
+                    row.forEachIndexed { i, l ->
+                        val hint = if (addNumHints && ri == 0) numHints1.getOrElse(i) { "" } else ""
+                        keys.add(Key(d + i * (kw + d), y, kw, h, l, hint = hint))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun buildNumShiftRow(row: List<String>, y: Float, h: Float, d: Float) {
+        val sideW = width * 0.118f
+        val charCount = row.size - 2
+        val kw = (width - sideW * 2 - d * (charCount + 3)) / charCount
+        var x = d
+        row.forEach { l ->
+            when (l) {
+                "=\\<"  -> { keys.add(Key(x, y, sideW, h, "=\\<", KeyType.SYMBOL_PAGE)); x += sideW + d }
+                "?123"  -> { keys.add(Key(x, y, sideW, h, "?123", KeyType.SYMBOL_PAGE)); x += sideW + d }
+                "BACK"  -> { keys.add(Key(x, y, sideW, h, "⌫", KeyType.BACKSPACE)); x += sideW + d }
+                else    -> { keys.add(Key(x, y, kw, h, l)); x += kw + d }
+            }
+        }
+    }
+
+    private fun buildNumBottomRow(row: List<String>, y: Float, h: Float, d: Float) {
+        val numW   = width * 0.110f
         val smallW = width * 0.085f
-        val enterW = width * 0.130f
-        val spaceW = width - numW - smallW*2 - enterW - pad*5
-
-        var x = pad
+        val enterW = width * 0.125f
+        val spaceW = width - numW - smallW * 2 - enterW - d * 5
+        var x = d
         row.forEach { l ->
             when (l) {
-                "?123","ABC" -> { keys.add(Key(x,y,numW,h,l,KeyType.NUMBERS)); x+=numW+pad }
-                "COMMA"      -> { keys.add(Key(x,y,smallW,h,",",KeyType.COMMA)); x+=smallW+pad }
-                "SPACE"      -> { keys.add(Key(x,y,spaceW,h,"space",KeyType.SPACE)); x+=spaceW+pad }
-                "PERIOD"     -> { keys.add(Key(x,y,smallW,h,".",KeyType.PERIOD)); x+=smallW+pad }
-                "ENTER","↵"  -> { keys.add(Key(x,y,enterW,h,"↵",KeyType.ENTER)); x+=enterW+pad }
-                else         -> { keys.add(Key(x,y,numW,h,l,KeyType.NUMBERS)); x+=numW+pad }
+                "ABC"    -> { keys.add(Key(x, y, numW,   h, l, KeyType.BACK_ALPHA)); x += numW   + d }
+                "COMMA"  -> { keys.add(Key(x, y, smallW, h, ",", KeyType.COMMA));   x += smallW + d }
+                "SPACE"  -> { keys.add(Key(x, y, spaceW, h, "space", KeyType.SPACE)); x += spaceW + d }
+                "PERIOD" -> { keys.add(Key(x, y, smallW, h, ".", KeyType.PERIOD));   x += smallW + d }
+                "ENTER"  -> { keys.add(Key(x, y, enterW, h, "↵", KeyType.ENTER));    x += enterW + d }
+                else     -> { keys.add(Key(x, y, numW,   h, l, KeyType.NUMBERS));    x += numW   + d }
             }
         }
     }
 
-    private fun buildClipboardKeys(pad: Float) {
-        val closeH = height * 0.14f
+    private fun buildStickers() {
+        val d = prefs.keyPaddingDp.toFloat()
+        val cols = 8; val sRows = stickers.size / cols + 1
+        val sw = width.toFloat() / cols; val sh = height.toFloat() / sRows
+        stickers.forEachIndexed { i, s ->
+            keys.add(Key((i % cols) * sw + d, (i / cols) * sh + d, sw - d * 2, sh - d * 2, s))
+        }
+        val closeY = (stickers.size / cols) * sh
+        keys.add(Key(d, closeY + d, width - d * 2, sh - d * 2, "← Назад", KeyType.CLIP_CLOSE))
+    }
+
+    private fun buildClipboard() {
+        clipItems.clear()
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = cm.primaryClip
+            if (clip != null) for (i in 0 until minOf(clip.itemCount, 4)) {
+                val t = clip.getItemAt(i).coerceToText(context).toString()
+                if (t.isNotBlank()) clipItems.add(t)
+            }
+        } catch (_: Exception) {}
+
+        val d = prefs.keyPaddingDp.toFloat()
+        val closeH = height * 0.15f
         val itemH  = height * 0.20f
-        clipKeys.add(Key(pad, pad, width-pad*2, closeH-pad*2, "✕  Буфер обмена", KeyType.CLIP_CLOSE))
+        keys.add(Key(d, d, width - d * 2, closeH - d * 2, "✕  Буфер обмена", KeyType.CLIP_CLOSE))
         if (clipItems.isEmpty()) {
-            clipKeys.add(Key(pad, closeH+pad, width-pad*2, itemH-pad*2, "Буфер пуст"))
+            keys.add(Key(d, closeH + d, width - d * 2, itemH - d * 2, "Буфер пуст"))
         } else {
             clipItems.take(4).forEachIndexed { i, text ->
-                val y = closeH + i*itemH + pad
-                clipKeys.add(Key(pad, y, width-pad*2, itemH-pad*2,
-                    if (text.length > 45) text.take(45)+"…" else text, KeyType.CLIP_ITEM))
+                keys.add(Key(d, closeH + i * itemH + d, width - d * 2, itemH - d * 2,
+                    if (text.length > 50) text.take(50) + "…" else text, KeyType.CLIP_ITEM))
             }
         }
     }
 
-    // ─── Draw ────────────────────────────────────────────────────────────────
+    // ── Background image ──────────────────────────────────────────────────────
+    private var bgBitmap: Bitmap? = null
+    private var lastBgUri = ""
 
-
-
-    private fun drawKeyIcon(canvas: Canvas, k: Key, bm: Bitmap?) {
-        bm ?: return
-        val bx = k.x + k.w / 2f - bm.width / 2f
-        val by = k.y + k.h / 2f - bm.height / 2f
-        canvas.drawBitmap(bm, bx, by, iconPaint)
-    }
-
-    private fun loadIconsIfNeeded() {
-        val key = "${prefs.themeMode}|${prefs.accentColor}"
-        if (key == lastIconThemeKey && iconBackspace != null) return
-        lastIconThemeKey = key
-        val sz = (22f * context.resources.displayMetrics.density).toInt()
-        iconBackspace       = renderDrawable(R.drawable.ic_backspace,    sz, prefs.textColor())
-        iconBackspaceActive = renderDrawable(R.drawable.ic_backspace,    sz, prefs.accentTextColor())
-        iconEnter           = renderDrawable(R.drawable.ic_enter,        sz, prefs.textColor())
-        iconEnterActive     = renderDrawable(R.drawable.ic_enter,        sz, prefs.accentTextColor())
-        iconShift           = renderDrawable(R.drawable.ic_shift,        sz, prefs.textColor())
-        iconShiftLocked     = renderDrawable(R.drawable.ic_shift_locked, sz, prefs.accentTextColor())
-    }
-
-    private fun renderDrawable(resId: Int, sizePx: Int, tint: Int): Bitmap {
-        val bm = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-        val cvs = Canvas(bm)
-        val d = androidx.core.content.ContextCompat.getDrawable(context, resId) ?: return bm
-        val w = androidx.core.graphics.drawable.DrawableCompat.wrap(d).mutate()
-        androidx.core.graphics.drawable.DrawableCompat.setTint(w, tint)
-        w.setBounds(0, 0, sizePx, sizePx)
-        w.draw(cvs)
-        return bm
-    }
-
-    private fun loadBgIfNeeded() {
+    private fun loadBg() {
         val uri = prefs.bgImageUri
         if (uri == lastBgUri) return
         lastBgUri = uri
-        bgBitmap = if (uri.isEmpty()) null else {
-            try {
-                val input = context.contentResolver.openInputStream(Uri.parse(uri))
-                val raw = BitmapFactory.decodeStream(input)
-                input?.close()
-                // Scale to keyboard size
-                if (raw != null && width > 0 && height > 0)
-                    android.graphics.Bitmap.createScaledBitmap(raw, width, height, true)
-                else raw
-            } catch (_: Exception) { null }
-        }
+        bgBitmap = if (uri.isEmpty()) null else try {
+            val inp = context.contentResolver.openInputStream(android.net.Uri.parse(uri))
+            val raw = android.graphics.BitmapFactory.decodeStream(inp); inp?.close()
+            if (raw != null && width > 0 && height > 0)
+                Bitmap.createScaledBitmap(raw, width, height, true)
+            else raw
+        } catch (_: Exception) { null }
     }
+
+    // ── Icon loading ──────────────────────────────────────────────────────────
+    private fun loadIcons() {
+        val key = "${prefs.themeMode}|${prefs.accentColor}"
+        if (key == iconThemeKey && iconBackspace != null) return
+        iconThemeKey = key
+        val sz = (20f * context.resources.displayMetrics.density).toInt()
+        iconBackspace      = renderIcon(R.drawable.ic_backspace,    sz, prefs.textColor())
+        iconBackspaceActive= renderIcon(R.drawable.ic_backspace,    sz, prefs.accentTextColor())
+        iconEnter          = renderIcon(R.drawable.ic_enter,        sz, prefs.textColor())
+        iconEnterActive    = renderIcon(R.drawable.ic_enter,        sz, prefs.accentTextColor())
+        iconShift          = renderIcon(R.drawable.ic_shift,        sz, prefs.textColor())
+        iconShiftActive    = renderIcon(R.drawable.ic_shift_locked, sz, prefs.accentTextColor())
+    }
+
+    private fun renderIcon(resId: Int, sz: Int, tint: Int): Bitmap {
+        val bm  = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
+        val cvs = Canvas(bm)
+        val d   = androidx.core.content.ContextCompat.getDrawable(context, resId) ?: return bm
+        val w   = androidx.core.graphics.drawable.DrawableCompat.wrap(d).mutate()
+        androidx.core.graphics.drawable.DrawableCompat.setTint(w, tint)
+        w.setBounds(0, 0, sz, sz); w.draw(cvs)
+        return bm
+    }
+
+    // ── Draw ──────────────────────────────────────────────────────────────────
     override fun onDraw(canvas: Canvas) {
+        loadBg(); loadIcons()
         val r = prefs.keyRadius
-        loadBgIfNeeded()
-        loadIconsIfNeeded()
+
+        // Background
         canvas.drawColor(prefs.bgColor())
-        // Draw background image if set
-        bgBitmap?.let { bm ->
-            bgPaint.alpha = (prefs.bgImageOpacity * 255 / 100).coerceIn(0, 255)
-            canvas.drawBitmap(bm, 0f, 0f, bgPaint)
-        }
-        when {
-            showClipboard -> { drawClipboard(canvas); return }
-            showStickers  -> { drawStickers(canvas); return }
+        bgBitmap?.let {
+            bgImagePaint.alpha = (prefs.bgImageOpacity * 255 / 100).coerceIn(0, 255)
+            canvas.drawBitmap(it, 0f, 0f, bgImagePaint)
         }
 
-        keys.forEach { k ->
-            val pressed = k == pressedKey
-            val rect = RectF(k.x, k.y, k.x+k.w, k.y+k.h)
-            val isSpecial = k.type in listOf(
-                KeyType.BACKSPACE, KeyType.SHIFT, KeyType.ENTER, KeyType.NUMBERS)
-            val isSmall = k.type in listOf(
-                KeyType.COMMA, KeyType.PERIOD, KeyType.ARROW_LEFT, KeyType.ARROW_RIGHT)
+        // Keys
+        keys.forEach { k -> drawKey(canvas, k, r) }
+    }
 
-            if (!pressed) {
-                shadowPaint.color = prefs.shadowColor()
-                canvas.drawRoundRect(RectF(rect.left+1,rect.top+2,rect.right+1,rect.bottom+2), r, r, shadowPaint)
+    private fun drawKey(canvas: Canvas, k: Key, r: Float) {
+        val pressed   = k == pressedKey
+        val isSpecial = k.type in listOf(KeyType.BACKSPACE, KeyType.SHIFT, KeyType.ENTER,
+            KeyType.NUMBERS, KeyType.SYMBOL_PAGE, KeyType.BACK_ALPHA, KeyType.STICKER,
+            KeyType.CLIP_CLOSE)
+        val isSmall   = k.type in listOf(KeyType.COMMA, KeyType.PERIOD)
+        val rect      = RectF(k.x, k.y, k.x + k.w, k.y + k.h)
+
+        // FlorisBoard-style elevation: bottom shadow stripe
+        if (!pressed) {
+            shadowPaint.color = prefs.shadowColor()
+            canvas.drawRoundRect(
+                RectF(rect.left + 1f, rect.top + 3f, rect.right + 1f, rect.bottom + 4f),
+                r, r, shadowPaint
+            )
+        }
+
+        // Key bg
+        val shiftActive = k.type == KeyType.SHIFT && (isShifted || isCapsLock)
+        val bg = when {
+            pressed && k.type in listOf(KeyType.BACKSPACE, KeyType.ENTER, KeyType.SHIFT) -> prefs.accentColor
+            pressed -> blend(if (isSpecial || isSmall) prefs.specialKeyColor() else prefs.keyColor(), prefs.accentColor, 0.28f)
+            shiftActive -> prefs.accentColor
+            k.type == KeyType.SPACE -> prefs.spaceBarColor()
+            isSpecial || isSmall   -> prefs.specialKeyColor()
+            k.type == KeyType.CLIP_ITEM -> prefs.keyColor()
+            k.type == KeyType.CLIP_CLOSE -> prefs.accentColor
+            else -> prefs.keyColor()
+        }
+        val drawRect = if (pressed)
+            RectF(rect.left + 0.5f, rect.top + 1f, rect.right - 0.5f, rect.bottom)
+        else rect
+
+        keyPaint.color = (bg and 0x00FFFFFF) or (prefs.keyAlpha shl 24)
+        canvas.drawRoundRect(drawRect, r, r, keyPaint)
+
+        // Text / Icon
+        when (k.type) {
+            KeyType.BACKSPACE -> {
+                val bm = if (pressed) iconBackspaceActive else iconBackspace
+                drawIcon(canvas, k, bm)
             }
-
-            keyPaint.color = when {
-                // Backspace or Enter pressed → accent background
-                pressed && k.type in listOf(KeyType.BACKSPACE, KeyType.ENTER) -> prefs.accentColor
-                // Other keys pressed → blend toward accent
-                pressed -> blend(
-                    if (isSpecial||isSmall) prefs.specialKeyColor() else prefs.keyColor(),
-                    prefs.accentColor, 0.25f)
-                // Shift with caps → accent background
-                k.type == KeyType.SHIFT && (isShifted||isCapsLock) -> prefs.accentColor
-                // Enter normal → special key color (same as Backspace)
-                k.type == KeyType.ENTER -> prefs.specialKeyColor()
-                isSpecial || isSmall -> prefs.specialKeyColor()
-                else -> prefs.keyColor()
+            KeyType.ENTER -> {
+                val bm = if (pressed) iconEnterActive else iconEnter
+                drawIcon(canvas, k, bm)
             }
-            canvas.drawRoundRect(rect, r, r, keyPaint)
-
-            // Label
-            val accentKey = k.type == KeyType.ENTER ||
-                            (k.type == KeyType.SHIFT && (isShifted||isCapsLock))
-            textPaint.color = if (accentKey) prefs.accentTextColor() else prefs.textColor()
-
-            val label: String
-            val fontSize: Float
-            when (k.type) {
-                KeyType.SPACE -> {
-                    val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
-                    val langName = when (lang) { "en" -> "English"; "uk" -> "Українська"; else -> "Русский" }
-                    label = "‹ $langName ›"
-                    fontSize = k.h * 0.26f
-                }
-                KeyType.SHIFT -> {
-                    label = ""  // drawn as bitmap below
-                    fontSize = k.h * 0.46f
-                }
-                KeyType.ENTER -> {
-                    label = ""  // drawn as bitmap below
-                    fontSize = k.h * 0.44f
-                }
-                KeyType.ARROW_LEFT, KeyType.ARROW_RIGHT -> {
-                    label = k.label; fontSize = k.h * 0.36f
-                }
-                KeyType.NUMBERS -> { label = k.label; fontSize = k.h * 0.32f }
-                KeyType.COMMA, KeyType.PERIOD -> { label = k.label; fontSize = k.h * 0.46f }
-                KeyType.BACKSPACE -> { label = ""; fontSize = k.h * 0.44f }
-                else -> { label = k.label; fontSize = k.h * 0.42f }
+            KeyType.SHIFT -> {
+                val bm = if (shiftActive || pressed) iconShiftActive else iconShift
+                drawIcon(canvas, k, bm)
             }
-            textPaint.textSize = fontSize
-            canvas.drawText(label, k.x+k.w/2, k.y+k.h*0.64f, textPaint)
-
-            // Draw icons — pick correct cached bitmap based on pressed/active state
-            when (k.type) {
-                KeyType.BACKSPACE -> {
-                    // pressed → white icon on accent bg; normal → textColor icon on specialKey bg
-                    val bm = if (pressed) iconBackspaceActive else iconBackspace
-                    drawKeyIcon(canvas, k, bm)
-                }
-                KeyType.ENTER -> {
-                    val bm = if (pressed) iconEnterActive else iconEnter
-                    drawKeyIcon(canvas, k, bm)
-                }
-                KeyType.SHIFT -> drawKeyIcon(canvas, k, if (isCapsLock) iconShiftLocked else iconShift)
-                else -> {}
+            KeyType.SPACE -> {
+                // Language name with arrows
+                val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
+                val name = when (lang) { "en" -> "English"; "uk" -> "Українська"; else -> "Русский" }
+                textPaint.textSize = k.h * 0.28f
+                textPaint.color    = prefs.hintTextColor()
+                canvas.drawText("‹ $name ›", k.x + k.w / 2f, k.y + k.h * 0.64f, textPaint)
             }
+            KeyType.CLIP_CLOSE, KeyType.CLIP_ITEM -> {
+                textPaint.textSize = k.h * 0.28f
+                textPaint.color    = if (k.type == KeyType.CLIP_CLOSE) prefs.accentTextColor() else prefs.textColor()
+                val maxW = k.w - 24f
+                var txt = k.label
+                while (txt.length > 1 && textPaint.measureText(txt) > maxW) txt = txt.dropLast(1)
+                canvas.drawText(txt, k.x + k.w / 2f, k.y + k.h * 0.62f, textPaint)
+            }
+            else -> {
+                // Label
+                textPaint.textSize = when (k.type) {
+                    KeyType.NUMBERS, KeyType.SYMBOL_PAGE, KeyType.BACK_ALPHA -> k.h * 0.31f
+                    KeyType.COMMA, KeyType.PERIOD -> k.h * 0.44f
+                    else -> k.h * 0.42f
+                }
+                val txtColor = when {
+                    shiftActive || (pressed && k.type == KeyType.SHIFT) -> prefs.accentTextColor()
+                    pressed && k.type in listOf(KeyType.BACKSPACE, KeyType.ENTER) -> prefs.accentTextColor()
+                    else -> prefs.textColor()
+                }
+                textPaint.color = txtColor
+                canvas.drawText(k.label, k.x + k.w / 2f, k.y + k.h * 0.64f, textPaint)
 
-            if (k.altLabel.isNotEmpty() && prefs.showTopHints) {
-                hintPaint.color = prefs.hintTextColor()
-                hintPaint.textSize = k.h * 0.22f
-                canvas.drawText(k.altLabel, k.x+k.w*0.80f, k.y+k.h*0.28f, hintPaint)
+                // Hint (top-right corner, like FlorisBoard)
+                if (k.hint.isNotEmpty() && prefs.showTopHints) {
+                    hintPaint.textSize = k.h * 0.20f
+                    hintPaint.color    = prefs.hintTextColor()
+                    canvas.drawText(k.hint, k.x + k.w - 5f, k.y + k.h * 0.26f, hintPaint)
+                }
             }
         }
 
-        // Swipe trail
-        if (isSwipeMode && swipePath.size > 1 && prefs.swipeEnabled && !swipeOnSpace && !swipeStartedOnBackspace) {
-            swipePaint.color = (prefs.accentColor and 0x00FFFFFF) or (0x99 shl 24)
-            val path = Path()
-            path.moveTo(swipePath[0].x, swipePath[0].y)
-            for (i in 1 until swipePath.size) path.lineTo(swipePath[i].x, swipePath[i].y)
-            canvas.drawPath(path, swipePaint)
-        }
-
-        if (prefs.popupEnabled) {
-            popupKey?.let { k ->
-                val pw = k.w * 1.4f; val ph = k.h * 1.55f
-                val px = (k.x + k.w/2 - pw/2).coerceIn(8f, width - pw - 8f)
-                val py = (k.y - ph - 6f).coerceAtLeast(4f)
-                // FlorisBoard: popup is pill-shaped with accent color
-                popupPaint.color = prefs.accentColor
-                val pillR = ph / 2f  // full pill radius
-                canvas.drawRoundRect(RectF(px, py, px+pw, py+ph), pillR, pillR, popupPaint)
-                // Small triangle pointing down to key
-                val triPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = prefs.accentColor; style = Paint.Style.FILL }
-                val triPath = Path().apply {
-                    moveTo(px + pw/2 - 8f, py + ph - 2f)
-                    lineTo(px + pw/2 + 8f, py + ph - 2f)
-                    lineTo(px + pw/2, py + ph + 8f)
-                    close()
-                }
-                canvas.drawPath(triPath, triPaint)
-                popupTextPaint.color = 0xFFFFFFFF.toInt()
-                popupTextPaint.textSize = ph * 0.52f
-                popupTextPaint.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
-                canvas.drawText(k.label, px + pw/2, py + ph * 0.65f, popupTextPaint)
-            }
+        // Popup bubble (GBoard style: pill above key)
+        if (k == popupKey && prefs.popupEnabled && k.type == KeyType.CHAR) {
+            drawPopup(canvas, k, r)
         }
     }
 
-    private fun drawStickers(canvas: Canvas) {
-        val r = prefs.keyRadius
-        stickerKeys.forEach { k ->
-            val isClose = k.type == KeyType.CLIP_CLOSE
-            keyPaint.color = if (isClose) prefs.accentColor else prefs.keyColor()
-            canvas.drawRoundRect(RectF(k.x,k.y,k.x+k.w,k.y+k.h), r, r, keyPaint)
-            textPaint.color = if (isClose) 0xFFFFFFFF.toInt() else prefs.textColor()
-            textPaint.textSize = if (isClose) k.h*0.30f else k.h*0.52f
-            canvas.drawText(k.label, k.x+k.w/2, k.y+k.h*0.65f, textPaint)
-        }
+    private fun drawIcon(canvas: Canvas, k: Key, bm: Bitmap?) {
+        bm ?: return
+        canvas.drawBitmap(bm,
+            k.x + k.w / 2f - bm.width / 2f,
+            k.y + k.h / 2f - bm.height / 2f,
+            iconPaint)
     }
 
-    private fun drawClipboard(canvas: Canvas) {
-        val r = prefs.keyRadius
-        clipKeys.forEach { k ->
-            val rect = RectF(k.x, k.y, k.x+k.w, k.y+k.h)
-            keyPaint.color = when (k.type) {
-                KeyType.CLIP_CLOSE -> prefs.accentColor
-                KeyType.CLIP_ITEM  -> prefs.keyColor()
-                else               -> prefs.surfaceColor()
-            }
-            canvas.drawRoundRect(rect, r, r, keyPaint)
-            textPaint.color = if (k.type == KeyType.CLIP_CLOSE) 0xFFFFFFFF.toInt() else prefs.textColor()
-            textPaint.textSize = k.h * 0.28f
-            val maxW = k.w - 24f
-            var txt = k.label
-            while (txt.isNotEmpty() && textPaint.measureText(txt) > maxW) txt = txt.dropLast(1)
-            canvas.drawText(txt, k.x+k.w/2, k.y+k.h*0.60f, textPaint)
+    private fun drawPopup(canvas: Canvas, k: Key, r: Float) {
+        val pw   = k.w * 1.35f
+        val ph   = k.h * 1.45f
+        val px   = (k.x + k.w / 2f - pw / 2f).coerceIn(6f, width - pw - 6f)
+        val py   = (k.y - ph - 8f).coerceAtLeast(4f)
+        val pill = ph / 2f
+
+        // Shadow for popup
+        shadowPaint.color = prefs.shadowColor()
+        canvas.drawRoundRect(RectF(px + 2f, py + 3f, px + pw + 2f, py + ph + 3f), pill, pill, shadowPaint)
+
+        // Popup bg
+        popupPaint.color = prefs.accentColor
+        canvas.drawRoundRect(RectF(px, py, px + pw, py + ph), pill, pill, popupPaint)
+
+        // Triangle pointer
+        val tri = Path().apply {
+            moveTo(px + pw / 2f - 7f, py + ph - 1f)
+            lineTo(px + pw / 2f + 7f, py + ph - 1f)
+            lineTo(px + pw / 2f,       py + ph + 9f)
+            close()
         }
+        canvas.drawPath(tri, popupPaint)
+
+        // Letter
+        popupTxtPaint.textSize = ph * 0.52f
+        canvas.drawText(k.label, px + pw / 2f, py + ph * 0.65f, popupTxtPaint)
     }
 
-    // ─── Touch ───────────────────────────────────────────────────────────────
+    // ── Touch ─────────────────────────────────────────────────────────────────
     override fun onTouchEvent(e: MotionEvent): Boolean {
         val x = e.x; val y = e.y
         when (e.action) {
             MotionEvent.ACTION_DOWN -> {
                 touchStartX = x; touchStartY = y
-                swipePath.clear(); swipePath.add(PointF(x,y))
-                isSwipeMode = false; swipeOnSpace = false; swipeStartedOnBackspace = false
-                isLongPressing = false
+                swipePath.clear(); swipePath.add(PointF(x, y))
+                isSwipeMode = false
 
-                val keyList = when {
-                    showClipboard -> clipKeys
-                    showStickers  -> stickerKeys
-                    else          -> keys
-                }
-                pressedKey = findKey(x, y, keyList)
+                pressedKey = findKey(x, y)
                 val k = pressedKey
+                swipeOnSpace     = k?.type == KeyType.SPACE
+                swipeOnBackspace = k?.type == KeyType.BACKSPACE
+                popupKey         = if (k?.type == KeyType.CHAR) k else null
 
-                swipeOnSpace = k?.type == KeyType.SPACE
-                swipeStartedOnBackspace = k?.type == KeyType.BACKSPACE
-
-                // Popup only for regular char keys
-                popupKey = if (k?.type == KeyType.CHAR && !showStickers && !showClipboard) k else null
-
-                // Long press on backspace → start repeating delete
-                if (k?.type == KeyType.BACKSPACE) {
-                    startLongPressDelete()
-                }
-
-                vibrate()
-                invalidate()
+                if (k?.type == KeyType.BACKSPACE) scheduleRepeat()
+                vibrate(); invalidate()
             }
-
             MotionEvent.ACTION_MOVE -> {
-                val dx = x - touchStartX
-                val adx = abs(dx)
+                val dx = x - touchStartX; val adx = abs(dx)
 
-                // Space swipe → language switch, don't allow swipe trail
-                if (swipeOnSpace) {
-                    invalidate(); return true
-                }
+                if (swipeOnSpace) { invalidate(); return true }
 
-                // Backspace swipe-delete: drag left on backspace key
-                if (swipeStartedOnBackspace) {
+                if (swipeOnBackspace) {
                     if (adx > 60f && dx < 0) {
-                        stopLongPress()
-                        service?.deleteWord()
-                        swipeStartedOnBackspace = false
-                        pressedKey = null
-                        invalidate()
+                        stopRepeat(); service?.deleteWord()
+                        swipeOnBackspace = false; pressedKey = null; invalidate()
                     }
                     return true
                 }
 
-                // Regular swipe typing
-                if (adx > 20f && prefs.swipeEnabled && !showStickers && !showClipboard) {
+                if (adx > 22f && prefs.swipeEnabled) {
                     isSwipeMode = true; popupKey = null
                     swipePath.add(PointF(x, y))
-                    pressedKey = findKey(x, y, keys)
-                    invalidate()
+                    pressedKey = findKey(x, y); invalidate()
                 }
             }
-
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                stopLongPress()
-                popupKey = null
+                stopRepeat(); popupKey = null
                 val dx = x - touchStartX
 
                 when {
-                    showClipboard -> findKey(x,y,clipKeys)?.let { handleClipKey(it) }
-                    showStickers  -> findKey(x,y,stickerKeys)?.let { handleSticker(it) }
-                    swipeOnSpace && abs(dx) > 35f -> switchLanguage(dx > 0)
-                    swipeStartedOnBackspace -> {
-                        // short tap on backspace — delete selected or one char
-                        deleteSelectedOrChar()
-                    }
+                    swipeOnSpace && abs(dx) > 35f -> switchLang(dx > 0)
+                    swipeOnBackspace              -> deleteSelectedOrChar()
                     isSwipeMode && prefs.swipeEnabled -> handleSwipe()
-                    else -> (pressedKey ?: findKey(x,y,keys))?.let { handleKey(it) }
+                    else -> (pressedKey ?: findKey(x, y))?.let { handleKey(it) }
                 }
 
-                pressedKey = null; isSwipeMode = false; swipeOnSpace = false
-                swipeStartedOnBackspace = false; swipePath.clear(); invalidate()
+                pressedKey = null; isSwipeMode = false
+                swipeOnSpace = false; swipeOnBackspace = false
+                swipePath.clear(); invalidate()
             }
         }
         return true
     }
 
-    // ─── Long press delete ────────────────────────────────────────────────────
-    private fun startLongPressDelete() {
-        val repeatRunnable = object : Runnable {
-            override fun run() {
-                if (isLongPressing) {
-                    deleteSelectedOrChar()
-                    vibrate()
-                    postDelayed(this, repeatDelay)
-                }
-            }
-        }
-        longPressRunnable = Runnable {
-            isLongPressing = true
-            deleteSelectedOrChar()
-            postDelayed(repeatRunnable, repeatDelay)
-        }
-        postDelayed(longPressRunnable!!, longPressDelay)
-    }
+    private fun findKey(x: Float, y: Float) =
+        keys.firstOrNull { x >= it.x && x <= it.x + it.w && y >= it.y && y <= it.y + it.h }
 
-    private fun stopLongPress() {
-        longPressRunnable?.let { removeCallbacks(it) }
-        longPressRunnable = null
-        isLongPressing = false
-    }
-
-    // Deletes selected text if any, otherwise one character
-    private fun deleteSelectedOrChar() {
-        val conn = service?.currentInputConnectionCompat
-        if (conn != null) {
-            val selected = conn.getSelectedText(0)
-            if (!selected.isNullOrEmpty()) {
-                conn.commitText("", 1)
-            } else {
-                service?.deleteChar()
-            }
-        } else {
-            service?.deleteChar()
-        }
-    }
-
-    // ─── Actions ─────────────────────────────────────────────────────────────
-    private fun switchLanguage(forward: Boolean) {
-        val langs = allLangs
-        currentLangIndex = if (forward) (currentLangIndex+1) % langs.size
-                           else (currentLangIndex-1+langs.size) % langs.size
-        prefs.primaryLanguage = langs[currentLangIndex]
-        rebuildKeys(); invalidate(); vibrate()
-    }
-
-    private fun findKey(x: Float, y: Float, list: List<Key>) =
-        list.firstOrNull { x >= it.x && x <= it.x+it.w && y >= it.y && y <= it.y+it.h }
-
+    // ── Key actions ───────────────────────────────────────────────────────────
     private fun handleKey(k: Key) {
         when (k.type) {
             KeyType.CHAR -> {
                 service?.commitText(k.label)
-                if (isShifted && !isCapsLock) { isShifted=false; rebuildKeys(); invalidate() }
+                if (isShifted && !isCapsLock) { isShifted = false; rebuildKeys(); invalidate() }
             }
-            KeyType.COMMA  -> {
-                service?.commitText(",")
-                if (isShifted && !isCapsLock) { isShifted=false; rebuildKeys(); invalidate() }
+            KeyType.COMMA  -> { service?.commitText(","); autoUnshift() }
+            KeyType.PERIOD -> { service?.commitText("."); autoUnshift() }
+            KeyType.BACKSPACE -> deleteSelectedOrChar()
+            KeyType.SPACE     -> service?.commitText(" ")
+            KeyType.ENTER     -> service?.performEnter()
+            KeyType.STICKER   -> { keyboardMode = Mode.STICKER; rebuildKeys(); invalidate() }
+            KeyType.NUMBERS   -> { keyboardMode = Mode.NUMERIC; rebuildKeys(); invalidate() }
+            KeyType.SYMBOL_PAGE -> {
+                keyboardMode = if (keyboardMode == Mode.NUMERIC) Mode.SYMBOL else Mode.NUMERIC
+                rebuildKeys(); invalidate()
             }
-            KeyType.PERIOD -> {
-                service?.commitText(".")
-                if (isShifted && !isCapsLock) { isShifted=false; rebuildKeys(); invalidate() }
-            }
-            KeyType.BACKSPACE  -> deleteSelectedOrChar()
-            KeyType.SPACE      -> service?.commitText(" ")
-            KeyType.ENTER      -> service?.performEnter()
-            KeyType.STICKER    -> { showStickers=true; invalidate() }
-            KeyType.NUMBERS    -> { showNumbers=!showNumbers; rebuildKeys(); invalidate() }
-            KeyType.LANG       -> switchLanguage(true)
-            KeyType.ARROW_LEFT -> {
-                val conn = service?.currentInputConnectionCompat
-                conn?.sendKeyEvent(android.view.KeyEvent(
-                    android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT))
-                conn?.sendKeyEvent(android.view.KeyEvent(
-                    android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_LEFT))
-            }
-            KeyType.ARROW_RIGHT -> {
-                val conn = service?.currentInputConnectionCompat
-                conn?.sendKeyEvent(android.view.KeyEvent(
-                    android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
-                conn?.sendKeyEvent(android.view.KeyEvent(
-                    android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
-            }
+            KeyType.BACK_ALPHA -> { keyboardMode = Mode.ALPHA; rebuildKeys(); invalidate() }
+            KeyType.LANG       -> switchLang(true)
             KeyType.SHIFT -> {
                 val now = System.currentTimeMillis()
-                if (now-lastShiftTime < 400) { isCapsLock=!isCapsLock; isShifted=isCapsLock }
-                else { isShifted=!isShifted; isCapsLock=false }
-                lastShiftTime=now; rebuildKeys(); invalidate()
+                if (now - lastShiftTime < 400) { isCapsLock = !isCapsLock; isShifted = isCapsLock }
+                else { isShifted = !isShifted; isCapsLock = false }
+                lastShiftTime = now; rebuildKeys(); invalidate()
             }
-            else -> {}
-        }
-    }
-
-    private fun handleSticker(k: Key) {
-        if (k.type == KeyType.CLIP_CLOSE) { showStickers=false; invalidate() }
-        else service?.commitEmoji(k.label)
-    }
-
-    private fun handleClipKey(k: Key) {
-        when (k.type) {
-            KeyType.CLIP_CLOSE -> { showClipboard=false; invalidate() }
-            KeyType.CLIP_ITEM -> {
-                val idx = clipKeys.filter { it.type==KeyType.CLIP_ITEM }.indexOf(k)
-                if (idx>=0 && idx<clipItems.size) service?.commitText(clipItems[idx])
-                showClipboard=false; invalidate()
-            }
-            else -> {}
-        }
-    }
-
-    fun openClipboard() {
-        clipItems.clear()
-        try {
-            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            val clip = cm.primaryClip
-            if (clip != null) {
-                for (i in 0 until minOf(clip.itemCount, 4)) {
-                    val t = clip.getItemAt(i).coerceToText(context).toString()
-                    if (t.isNotBlank()) clipItems.add(t)
+            KeyType.CLIP_CLOSE -> {
+                if (keyboardMode == Mode.STICKER || keyboardMode == Mode.CLIPBOARD) {
+                    keyboardMode = Mode.ALPHA; rebuildKeys(); invalidate()
                 }
             }
-        } catch (_: Exception) {}
-        showClipboard=true; rebuildKeys(); invalidate()
+            KeyType.CLIP_ITEM -> {
+                val idx = keys.filter { it.type == KeyType.CLIP_ITEM }.indexOf(k)
+                if (idx >= 0 && idx < clipItems.size) service?.commitText(clipItems[idx])
+                keyboardMode = Mode.ALPHA; rebuildKeys(); invalidate()
+            }
+            else -> {}
+        }
+    }
+
+    private fun autoUnshift() {
+        if (isShifted && !isCapsLock) { isShifted = false; rebuildKeys(); invalidate() }
+    }
+
+    private fun switchLang(forward: Boolean) {
+        val langs = allLangs
+        currentLangIndex = if (forward) (currentLangIndex + 1) % langs.size
+                           else (currentLangIndex - 1 + langs.size) % langs.size
+        prefs.primaryLanguage = langs[currentLangIndex]
+        rebuildKeys(); invalidate(); vibrate()
+    }
+
+    private fun deleteSelectedOrChar() {
+        val conn = service?.currentInputConnectionCompat
+        if (conn != null) {
+            val sel = conn.getSelectedText(0)
+            if (!sel.isNullOrEmpty()) conn.commitText("", 1)
+            else service?.deleteChar()
+        } else service?.deleteChar()
     }
 
     private fun handleSwipe() {
         if (swipePath.size < 3) return
         val word = StringBuilder()
         swipePath.forEach { pt ->
-            findKey(pt.x, pt.y, keys)?.let {
-                if (it.type==KeyType.CHAR && it.label.length==1 &&
-                    (word.isEmpty() || word.last().toString()!=it.label)) word.append(it.label)
+            findKey(pt.x, pt.y)?.let {
+                if (it.type == KeyType.CHAR && it.label.length == 1 &&
+                    (word.isEmpty() || word.last().toString() != it.label)) word.append(it.label)
             }
         }
-        if (word.length > 1) service?.commitText(word.toString()+" ")
+        if (word.length > 1) service?.commitText(word.toString() + " ")
     }
 
+    // ── Long press repeat ─────────────────────────────────────────────────────
+    private fun scheduleRepeat() {
+        val repeat = object : Runnable {
+            override fun run() {
+                if (isRepeating) { deleteSelectedOrChar(); vibrate(); postDelayed(this, REPEAT_DELAY) }
+            }
+        }
+        longPressRunnable = Runnable { isRepeating = true; deleteSelectedOrChar(); postDelayed(repeat, REPEAT_DELAY) }
+        postDelayed(longPressRunnable!!, LONG_PRESS_DELAY)
+    }
+
+    private fun stopRepeat() {
+        longPressRunnable?.let { removeCallbacks(it) }
+        longPressRunnable = null; isRepeating = false
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
     private fun vibrate() {
         if (!prefs.vibrateEnabled) return
         try {
             @Suppress("DEPRECATION")
             val v = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            v.vibrate(VibrationEffect.createOneShot(
-                prefs.vibrateDurationMs.toLong(), VibrationEffect.DEFAULT_AMPLITUDE))
+            v.vibrate(VibrationEffect.createOneShot(prefs.vibrateDurationMs.toLong(), VibrationEffect.DEFAULT_AMPLITUDE))
         } catch (_: Exception) {}
     }
 
     private fun blend(c1: Int, c2: Int, r: Float): Int {
-        val ir = 1f-r
+        val ir = 1f - r
         return Color.rgb(
-            (Color.red(c1)*ir+Color.red(c2)*r).toInt(),
-            (Color.green(c1)*ir+Color.green(c2)*r).toInt(),
-            (Color.blue(c1)*ir+Color.blue(c2)*r).toInt())
+            (Color.red(c1)   * ir + Color.red(c2)   * r).toInt(),
+            (Color.green(c1) * ir + Color.green(c2) * r).toInt(),
+            (Color.blue(c1)  * ir + Color.blue(c2)  * r).toInt()
+        )
     }
 }
