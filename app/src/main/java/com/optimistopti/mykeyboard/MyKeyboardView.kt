@@ -429,14 +429,26 @@ class MyKeyboardView @JvmOverloads constructor(
 
         if (prefs.popupEnabled) {
             popupKey?.let { k ->
-                val pw = k.w*1.5f; val ph = k.h*1.6f
-                val px = (k.x+k.w/2-pw/2).coerceIn(4f, width-pw-4f)
-                val py = (k.y-ph-4f).coerceAtLeast(4f)
+                val pw = k.w * 1.4f; val ph = k.h * 1.55f
+                val px = (k.x + k.w/2 - pw/2).coerceIn(8f, width - pw - 8f)
+                val py = (k.y - ph - 6f).coerceAtLeast(4f)
+                // FlorisBoard: popup is pill-shaped with accent color
                 popupPaint.color = prefs.accentColor
-                canvas.drawRoundRect(RectF(px,py,px+pw,py+ph), prefs.keyRadius*1.5f, prefs.keyRadius*1.5f, popupPaint)
+                val pillR = ph / 2f  // full pill radius
+                canvas.drawRoundRect(RectF(px, py, px+pw, py+ph), pillR, pillR, popupPaint)
+                // Small triangle pointing down to key
+                val triPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = prefs.accentColor; style = Paint.Style.FILL }
+                val triPath = Path().apply {
+                    moveTo(px + pw/2 - 8f, py + ph - 2f)
+                    lineTo(px + pw/2 + 8f, py + ph - 2f)
+                    lineTo(px + pw/2, py + ph + 8f)
+                    close()
+                }
+                canvas.drawPath(triPath, triPaint)
                 popupTextPaint.color = 0xFFFFFFFF.toInt()
-                popupTextPaint.textSize = ph * 0.55f
-                canvas.drawText(k.label, px+pw/2, py+ph*0.68f, popupTextPaint)
+                popupTextPaint.textSize = ph * 0.52f
+                popupTextPaint.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                canvas.drawText(k.label, px + pw/2, py + ph * 0.65f, popupTextPaint)
             }
         }
     }
