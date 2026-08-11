@@ -160,4 +160,11 @@ class KeyboardPrefs(context: Context) {
     fun accentTextColor() = 0xFFFFFFFF.toInt()
     fun keyColorAlpha(): Int = (keyColor() and 0x00FFFFFF) or (keyAlpha shl 24)
     fun specialKeyColorAlpha(): Int = (specialKeyColor() and 0x00FFFFFF) or (keyAlpha shl 24)
+
+    // FlorisBoard-style space bar — slightly different from regular keys
+    fun spaceBarColor() = when (themeMode) {
+        THEME_DAY    -> 0xFFE8E0F0.toInt()  // slightly tinted
+        THEME_AMOLED -> 0xFF111111.toInt()  // dark but visible
+        else         -> 0xFF3A3540.toInt()  // lighter than key bg
+    }
 }
