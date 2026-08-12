@@ -22,17 +22,25 @@ class MyKeyboardService : InputMethodService() {
         themeReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (::keyboardView.isInitialized) {
+                    keyboardView.iconThemeKey = ""
                     keyboardView.invalidate()
                 }
             }
         }
-        val filter = IntentFilter(ThemeActivity.ACTION_THEME_CHANGED)
-        registerReceiver(themeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        try {
+            registerReceiver(
+                themeReceiver,
+                IntentFilter(ThemeActivity.ACTION_THEME_CHANGED),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } catch (_: Exception) {}
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        themeReceiver?.let { unregisterReceiver(it) }
+        themeReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+        }
     }
 
     override fun onCreateInputView(): View {
@@ -47,9 +55,13 @@ class MyKeyboardService : InputMethodService() {
         keyboardView.reset()
     }
 
-    fun commitText(text: String) { currentInputConnection?.commitText(text, 1) }
+    fun commitText(text: String) {
+        currentInputConnection?.commitText(text, 1)
+    }
 
-    fun deleteChar() { currentInputConnection?.deleteSurroundingText(1, 0) }
+    fun deleteChar() {
+        currentInputConnection?.deleteSurroundingText(1, 0)
+    }
 
     fun deleteWord() {
         val conn = currentInputConnection ?: return
@@ -60,7 +72,9 @@ class MyKeyboardService : InputMethodService() {
         conn.deleteSurroundingText(toDelete.coerceAtLeast(1), 0)
     }
 
-    fun commitEmoji(emoji: String) { currentInputConnection?.commitText(emoji, 1) }
+    fun commitEmoji(emoji: String) {
+        currentInputConnection?.commitText(emoji, 1)
+    }
 
     fun performEnter() {
         super.sendDefaultEditorAction(true)
