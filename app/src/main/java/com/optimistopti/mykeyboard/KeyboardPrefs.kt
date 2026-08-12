@@ -53,15 +53,15 @@ class KeyboardPrefs(context: Context) {
 
     // ── Geometry ───────────────────────────────────────────────────────────
     var keyRadius: Float
-        get() = prefs.getFloat("key_radius", 8f)   // FlorisBoard uses ~8dp
+        get() = prefs.getFloat("key_radius", 10f)  // FlorisBoard uses ~10dp rounded
         set(v) = prefs.edit().putFloat("key_radius", v).apply()
 
     var keyHeightDp: Int
-        get() = prefs.getInt("key_height", 48)      // FlorisBoard default ~48dp
+        get() = prefs.getInt("key_height", 50)      // FlorisBoard default ~50dp (220dp / 4 rows - padding)
         set(v) = prefs.edit().putInt("key_height", v).apply()
 
     var keyPaddingDp: Int
-        get() = prefs.getInt("key_padding", 4)      // FlorisBoard ~4dp gaps
+        get() = prefs.getInt("key_padding", 3)      // FlorisBoard ~3dp gaps
         set(v) = prefs.edit().putInt("key_padding", v).apply()
 
     var keyAlpha: Int
