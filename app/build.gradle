@@ -9,8 +9,8 @@ android {
         applicationId "com.optimistopti.mykeyboard"
         minSdk 26
         targetSdk 35
-        versionCode 10
-        versionName "10.0"
+        versionCode 11
+        versionName "10.1"
         vectorDrawables.useSupportLibrary = true
     }
 
