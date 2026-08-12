@@ -7,6 +7,6 @@
     <com.optimistopti.mykeyboard.MyKeyboardView
         android:id="@+id/keyboard_view"
         android:layout_width="match_parent"
-        android:layout_height="220dp"/>
+        android:layout_height="212dp"/>
 
 </LinearLayout>
