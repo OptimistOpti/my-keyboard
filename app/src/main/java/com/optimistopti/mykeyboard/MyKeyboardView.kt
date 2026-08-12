@@ -220,10 +220,11 @@ class MyKeyboardView @JvmOverloads constructor(
     private fun buildShiftRow(row: List<String>, y: Float, h: Float, d: Float) {
         val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
         val isEn = lang == "en"
-        // English has 9 chars, RU/UK has 10
         val charCount = row.size - 2
-        val sideW = width * (if (isEn) 0.135f else 0.118f)
-        val kw = (width - sideW * 2 - d * (charCount + 3)) / charCount
+        // FlorisBoard: shift/del are ~13% for EN (9 chars), ~12% for RU/UK (10 chars)
+        val sideW = width * (if (isEn) 0.132f else 0.118f)
+        val totalSide = sideW * 2 + d * (charCount + 3)
+        val kw = (width - totalSide) / charCount
         var x = d
         row.forEach { l ->
             when (l) {
@@ -235,20 +236,20 @@ class MyKeyboardView @JvmOverloads constructor(
     }
 
     private fun buildBottomRow(row: List<String>, y: Float, h: Float, d: Float) {
-        // ?123 | , | ‹ LANG › | . | ↵
-        val numW    = width * 0.110f
-        val smallW  = width * 0.085f
-        val enterW  = width * 0.125f
-        val spaceW  = width - numW - smallW * 2 - enterW - d * 5
+        // FlorisBoard bottom: ?123(11%) | ,(7%) | ‹LANG›(~47%) | .(7%) | ↵(11%) + gaps
+        val numW   = width * 0.110f   // ?123 and enter
+        val smallW = width * 0.072f   // comma and period (narrower than keys)
+        val enterW = width * 0.110f
+        val spaceW = width - numW - smallW * 2 - enterW - d * 5
         var x = d
         row.forEach { l ->
             when (l) {
-                "?123"   -> { keys.add(Key(x, y, numW,   h, l, KeyType.NUMBERS));  x += numW   + d }
-                "COMMA"  -> { keys.add(Key(x, y, smallW, h, ",", KeyType.COMMA));  x += smallW + d }
+                "?123"   -> { keys.add(Key(x, y, numW,   h, l,     KeyType.NUMBERS)); x += numW   + d }
+                "COMMA"  -> { keys.add(Key(x, y, smallW, h, ",",   KeyType.COMMA));   x += smallW + d }
                 "SPACE"  -> { keys.add(Key(x, y, spaceW, h, "space", KeyType.SPACE)); x += spaceW + d }
-                "PERIOD" -> { keys.add(Key(x, y, smallW, h, ".", KeyType.PERIOD)); x += smallW + d }
-                "ENTER"  -> { keys.add(Key(x, y, enterW, h, "↵", KeyType.ENTER));  x += enterW + d }
-                else     -> { keys.add(Key(x, y, numW,   h, l, KeyType.NUMBERS));  x += numW   + d }
+                "PERIOD" -> { keys.add(Key(x, y, smallW, h, ".",   KeyType.PERIOD));  x += smallW + d }
+                "ENTER"  -> { keys.add(Key(x, y, enterW, h, "↵",  KeyType.ENTER));   x += enterW + d }
+                else     -> { keys.add(Key(x, y, numW,   h, l,     KeyType.NUMBERS)); x += numW   + d }
             }
         }
     }
@@ -452,7 +453,7 @@ class MyKeyboardView @JvmOverloads constructor(
                 // Language name with arrows
                 val lang = allLangs.getOrElse(currentLangIndex) { "ru" }
                 val name = when (lang) { "en" -> "English"; "uk" -> "Українська"; else -> "Русский" }
-                textPaint.textSize = k.h * 0.28f
+                textPaint.textSize = k.h * 0.25f  // smaller lang label like FlorisBoard
                 textPaint.color    = prefs.hintTextColor()
                 canvas.drawText("‹ $name ›", k.x + k.w / 2f, k.y + k.h * 0.64f, textPaint)
             }
@@ -467,9 +468,9 @@ class MyKeyboardView @JvmOverloads constructor(
             else -> {
                 // Label
                 textPaint.textSize = when (k.type) {
-                    KeyType.NUMBERS, KeyType.SYMBOL_PAGE, KeyType.BACK_ALPHA -> k.h * 0.31f
-                    KeyType.COMMA, KeyType.PERIOD -> k.h * 0.44f
-                    else -> k.h * 0.42f
+                    KeyType.NUMBERS, KeyType.SYMBOL_PAGE, KeyType.BACK_ALPHA -> k.h * 0.33f
+                    KeyType.COMMA, KeyType.PERIOD -> k.h * 0.46f
+                    else -> k.h * 0.44f   // FlorisBoard: ~44% of key height
                 }
                 val txtColor = when {
                     shiftActive || (pressed && k.type == KeyType.SHIFT) -> prefs.accentTextColor()
@@ -481,7 +482,7 @@ class MyKeyboardView @JvmOverloads constructor(
 
                 // Hint (top-right corner, like FlorisBoard)
                 if (k.hint.isNotEmpty() && prefs.showTopHints) {
-                    hintPaint.textSize = k.h * 0.20f
+                    hintPaint.textSize = k.h * 0.19f   // FlorisBoard hint size
                     hintPaint.color    = prefs.hintTextColor()
                     canvas.drawText(k.hint, k.x + k.w - 5f, k.y + k.h * 0.26f, hintPaint)
                 }
