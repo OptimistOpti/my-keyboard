@@ -55,7 +55,8 @@ class MainActivity : BaseSettingsActivity() {
             Item("🔊", "Звук и вибрация","Нажатие, интенсивность",         SoundActivity::class.java),
             Item("⌨️", "Клавиши",        "Цифры, попап, подсказки",        KeysActivity::class.java),
             Item("✏️", "Ввод текста",    "Автокоррекция, предсказание",    TextInputActivity::class.java),
-            Item("👆", "Жесты",          "Свайп-набор, удаление жестом",   GesturesActivity::class.java)
+            Item("👆", "Жесты",          "Свайп-набор, удаление жестом",   GesturesActivity::class.java),
+            Item("⚙️", "Управление настройками", "Экспорт, импорт, сброс",             SettingsManagerActivity::class.java)
         )
 
         b.rv.layoutManager = LinearLayoutManager(this)
