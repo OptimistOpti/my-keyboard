@@ -52,7 +52,7 @@ class MyKeyboardView @JvmOverloads constructor(
     private var iconShift: Bitmap? = null
     private var iconShiftActive: Bitmap? = null
     private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var iconThemeKey = ""
+    internal var iconThemeKey = ""
 
     // ── Paints ────────────────────────────────────────────────────────────────
     private val keyPaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
